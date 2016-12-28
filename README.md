@@ -1,6 +1,12 @@
-# blitzcheat-ml
+# Blitz Bot (ML version)
 
-FIXME: description
+I was seriously addicted to [Bejeweled Blitz](https://apps.facebook.com/bejeweledblitz), so I thought that if I wrote a bot that could play it well enough such that getting to the top of the leaderboard was no longer a challenge, I would be able to quit it. It worked... but this is not that bot.
+
+For [the previous bot](https://github.com/donaq/blitzbot), I basically hardcoded the colours of the gems, took screenshots, modeled the grid and then attempted to execute all possible current moves simultaneously.
+
+Rinse and repeat the above.
+
+That worked because the computer can click way faster than a human can, but it's just brute forcing the problem. I took Andrew Ng's ML course in Coursera some time in 2015 but have had neither time nor opportunity to use anything I learned. As with most knowledge, you use it or lose it, and I have definitely done the latter. This bot seems like a fun way to do some revision. For added challenge, I decided to use Clojure, a language which I was halfway through learning but had to put aside because work kept me busy... doing... *management* (the horror!)
 
 ## Installation
 
@@ -20,17 +26,12 @@ FIXME: listing of options this app accepts.
 
 ...
 
-### Bugs
-
-...
-
-### Any Other Sections
-### That You Think
-### Might be Useful
-
 ## License
 
 Copyright © 2016 FIXME
 
-Distributed under the Eclipse Public License either version 1.0 or (at
-your option) any later version.
+This program is licensed under the "I do not give a fuck what you do with it" license. Use, fork, sell it or whatever. Just don't ask me for maintenance or upgrades. If for some crazy reason you wish to reward me, please consider making a donation to the EFF or the FSF.
+
+## Warranty
+
+None whatsoever. If this bot causes Armageddon, let this be a lesson to you that cheaters never win. :p
