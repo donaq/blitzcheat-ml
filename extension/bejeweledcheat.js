@@ -5,9 +5,8 @@ var y2=-1;
 var overlayshown = false;
 var serv = "http://localhost:9999";
 $(document).ready(function(){
-	$('body').append('<div id="debug" />');
 	$('body').append('<div id="overlay" />');
-	$(document).keypress(function(evt){
+	/*$(document).keypress(function(evt){
 		// c for calibrate
 		if(evt.which==99){
 			if(!overlayshown){
@@ -60,5 +59,13 @@ $(document).ready(function(){
 			x2 = evt.screenX;
 			y2 = evt.screenY;
 		}
-	});
+	});*/
+    var sock = new WebSocket("ws://localhost:9999");
+    sock.onopen = function(evt){
+        sock.send("Connected!");
+    };
+    sock.onmessage = function(evt){
+        console.log("server replied: " + evt.data);
+        sock.close();
+    };
 });

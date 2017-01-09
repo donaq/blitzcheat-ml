@@ -13,4 +13,5 @@
   "I don't do a whole lot ... yet."
   [& args]
   ;(utils/take-screenshot)
+  (println "Starting server on port 9999")
   (run-server handler {:port 9999}))
