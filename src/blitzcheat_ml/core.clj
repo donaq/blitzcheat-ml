@@ -3,11 +3,16 @@
   (:require [blitzcheat-ml.utils :as utils])
   (:use [org.httpkit.server]))
 
+(defn startgame []
+  (println "startgame called"))
+
 (defn handler [request]
   (with-channel request channel
     (on-close channel (fn [status] (println "channel closed: " status)))
-    (on-receive channel (fn [data] ;; echo it back
-                          (send! channel data)))))
+    (on-receive channel (fn [data]
+                          ;(send! channel data)
+                          (println (resolve (symbol data)))
+                          (apply (resolve (symbol data)) [])))))
 
 (defn -main
   "I don't do a whole lot ... yet."

@@ -62,7 +62,7 @@ $(document).ready(function(){
 	});*/
     var sock = new WebSocket("ws://localhost:9999");
     sock.onopen = function(evt){
-        sock.send("Connected!");
+        sock.send("startgame");
     };
     sock.onmessage = function(evt){
         console.log("server replied: " + evt.data);
