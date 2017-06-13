@@ -60,12 +60,18 @@ $(document).ready(function(){
 			y2 = evt.screenY;
 		}
 	});*/
-    var sock = new WebSocket("ws://localhost:9999");
+    var sock = new WebSocket("ws://localhost:9999"),
+        timer = {timer:null};
     sock.onopen = function(evt){
-        sock.send("startgame");
+        if(timer.timer) clearInterval(timer.timer);
+        // perpetually send a timestamp
+        timer.timer = setInterval(function(){
+            var d = new Date();
+            sock.send(''+d.getTime());
+        },5000);
     };
-    sock.onmessage = function(evt){
-        console.log("server replied: " + evt.data);
-        sock.close();
+    sock.onclose = function(evt){
+        if(timer.timer) clearInterval(timer)
+        timer.timer = null;
     };
 });
