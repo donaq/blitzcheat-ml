@@ -1,12 +1,16 @@
 {
 	"name": "Bejeweled Blitz Machine Learning Bot",
-	"version": "1.0",
+	"version": "0.1",
 	"manifest_version": 2,
 	"description": "Cheat for BB",
+    "background": {
+        "scripts": ["background.js"]
+    },
 	"content_scripts": [
 		{
-			"matches": ["https://apps.facebook.com/bejeweledblitz/*"],
-			"js": ["jquery.min.js", "bejeweledcheat.js"]
+            "all_frames":true,
+			"matches": ["https://labs-aws.popcap.com/*","https://apps.facebook.com/bejeweledblitz/*"],
+			"js": ["bejeweledcheat.js"]
 		}
 	]
 }
