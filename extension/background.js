@@ -1,18 +1,24 @@
-function socksender(){
-	var sock = new WebSocket("ws://localhost:9999"),
-		timer = {timer:null};
-	sock.onopen = function(evt){
-		if(timer.timer) clearInterval(timer.timer);
-		// perpetually send a timestamp
-		timer.timer = setInterval(function(){
-			var d = new Date();
-			sock.send(''+d.getTime());
-		},5000);
-	};
+var sock = null;
+
+function createsock(){
+	sock = new WebSocket("ws://localhost:9999");
 	sock.onclose = function(evt){
-		if(timer.timer) clearInterval(timer)
-		timer.timer = null;
+		createsock();
+	};
+	sock.onerror = function(evt){
+		console.log(evt);
+		sock.close();
+		createsock();
 	};
 }
 
-socksender();
+createsock();
+
+chrome.runtime.onMessage.addListener(function(msg, cb){
+	//TODO: check if window and tab is active. if not, return
+	// check if socket is open
+	if(!sock || sock.readyState!=WebSocket.OPEN) return;
+
+	sock.send(JSON.stringify(msg));
+	console.log("sent " + msg);
+});
