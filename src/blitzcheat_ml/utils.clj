@@ -7,10 +7,21 @@
     (java.io File IOException)
     (javax.imageio ImageIO)))
 
-(defn take-screenshot []
+(defn take-screenshot [dat]
   ; Note that this borks if you are using Gnome on Wayland. I had to switch to Xorg for it to work. https://bbs.archlinux.org/viewtopic.php?id=220820
-  (let [screen (.getScreenSize (Toolkit/getDefaultToolkit)) 
+  (let [x (int (dat "left"))
+        y (int (dat "top"))
+        width (int (dat "width"))
+        height (int (dat "height"))
         rt (new Robot)
-        img (.createScreenCapture rt (new Rectangle (int (.getWidth screen)) (int (.getHeight screen))))]
+        fname (str (System/currentTimeMillis) ".jpg")
+        img (.createScreenCapture rt (new Rectangle x y width height))]
     ;TODO: we will need to return the image names
-    (ImageIO/write img "jpg" (new File (str (System/currentTimeMillis) ".jpg")))))
+    (ImageIO/write img "jpg" (new File fname))
+    (println "created " fname)))
+
+(defn mouseto [dat]
+  (let [x (int (dat "left"))
+        y (int (dat "top"))
+        rt (new Robot)]
+    (.mouseMove rt x y)))
