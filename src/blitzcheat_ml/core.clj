@@ -4,6 +4,8 @@
             [blitzcheat-ml.utils :as utils])
   (:use [org.httpkit.server]))
 
+(def called (atom false))
+
 (defn gameplayer-thread [channel]
   ;TODO: take screenshots continuously
   (fn []
@@ -24,20 +26,27 @@
     (utils/take-screenshot dat)))
     ;(utils/mouseto dat)))
 
-(defn handler [request]
-  (with-channel request channel
-    ;TODO: create a game playing object
-    (let [f (future ((gameplayer-thread channel)))]
-      (on-close channel (fn [status]
-        ;TODO: stop game playing object
-        (println "channel closed: " status)))
-      ; for completeness we include an on-receive, but we really don't care what is received
-      ; ok, for completeness and also it's nice to see if stuff is still happening
-      (on-receive channel handle-receive))))
+(defn get-receiver [mode]
+  (cond (= mode "gather") handle-receive
+        :else handle-receive))
+
+(defn handler [receiver]
+  (fn [request]
+    (with-channel request channel
+      ;TODO: create a game playing object
+      (let [f (future ((gameplayer-thread channel)))]
+        (on-close channel (fn [status]
+          ;TODO: stop game playing object
+          (println "channel closed: " status)))
+        ; for completeness we include an on-receive, but we really don't care what is received
+        ; ok, for completeness and also it's nice to see if stuff is still happening
+        (on-receive channel receiver)))))
 
 (defn -main
   "I don't do a whole lot ... yet."
   [& args]
+  (let [mode (nth args 0)
+        receiver (get-receiver mode)]
   ;(utils/take-screenshot)
-  (println "Starting server on port 9999")
-  (run-server handler {:port 9999}))
+    (println "Starting server on port 9999")
+    (run-server (handler receiver) {:port 9999})))

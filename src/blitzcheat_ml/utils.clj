@@ -14,7 +14,7 @@
         width (int (dat "width"))
         height (int (dat "height"))
         rt (new Robot)
-        fname (str (System/currentTimeMillis) ".jpg")
+        fname (str "raw/" (System/currentTimeMillis) ".jpg")
         img (.createScreenCapture rt (new Rectangle x y width height))]
     ;TODO: we will need to return the image names
     (ImageIO/write img "jpg" (new File fname))
