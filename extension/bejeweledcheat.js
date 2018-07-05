@@ -17,7 +17,7 @@
 			top = rect.top + y; 
 		
 		chrome.runtime.sendMessage({top:top,left:rect.left,width:rect.width,height:rect.height});
-	}, 5000);;
+	}, 500);;
 
 	var framewalker = setInterval(function(){
 		var elems = document.getElementsByTagName("IFRAME"),

@@ -4,6 +4,7 @@
             [blitzcheat-ml.utils :as utils])
   (:use [org.httpkit.server]))
 
+; this is a simple lock to prevent flooding
 (def called (atom false))
 
 (defn gameplayer-thread [channel]
@@ -13,24 +14,29 @@
       (Thread/sleep 1000)
       (if (not (and (websocket? channel) (open? channel)))
         (println "Channel is either not a websocket or it is closed. Exiting.")
-        (recur (println "Do some work")))))
-
-
+        (recur nil))))
   ;TODO: figure out from the screenshot if we have an ongoing game. if yes, do reinforced learning on the game
-
-  ;TODO: if we don't have an ongoing game, figure out if we can start a new one. this is probably going to be one of 3 screens. if it is not within the set of screens for which we can continue playing the game, we do nothing.
 )
 
-(defn handle-receive [data]
-  (let [dat (json/read-str data)]
-    (utils/take-screenshot dat)))
+(defn handle-receive [func]
+  "returns a function that converts data received from websocket to json and runs func on it"
+  (fn [data]
+    (let [dat (json/read-str data)]
+      (if (compare-and-set! called false true)
+        (do (func dat)
+            (reset! called false))
+        nil))))
     ;(utils/mouseto dat)))
 
-(defn get-receiver [mode]
-  (cond (= mode "gather") handle-receive
-        :else handle-receive))
+(defn get-worker [mode]
+  "based on mode, returns the function that does actual work, e.g. taking screenshots"
+  (handle-receive
+    (cond
+      (= mode "gather") utils/take-screenshot
+      :else (fn [dat] (println "do nothing")))))
 
-(defn handler [receiver]
+(defn handler [worker]
+  "returns actual handler of request"
   (fn [request]
     (with-channel request channel
       ;TODO: create a game playing object
@@ -40,13 +46,13 @@
           (println "channel closed: " status)))
         ; for completeness we include an on-receive, but we really don't care what is received
         ; ok, for completeness and also it's nice to see if stuff is still happening
-        (on-receive channel receiver)))))
+        (on-receive channel worker)))))
 
 (defn -main
   "I don't do a whole lot ... yet."
   [& args]
   (let [mode (nth args 0)
-        receiver (get-receiver mode)]
+        worker (get-worker mode)]
   ;(utils/take-screenshot)
     (println "Starting server on port 9999")
-    (run-server (handler receiver) {:port 9999})))
+    (run-server (handler worker) {:port 9999})))
