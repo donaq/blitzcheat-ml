@@ -2,10 +2,35 @@
   (:gen-class)
   (:require [clojure.data.json :as json]
             [blitzcheat-ml.utils :as utils])
-  (:use [org.httpkit.server]))
+  (:use [compojure.route :only [files not-found]]
+        [compojure.handler :only [site]] ; form, query params decode; cookie; session, etc
+        [compojure.core :only [defroutes GET POST DELETE ANY context]]
+        [org.httpkit.server]))
 
 ; this is a simple lock to prevent flooding
-(def called (atom false))
+(def extension-dat (atom nil))
+
+; how often the checker thread executes
+(def checkerdelay 50)
+; how big a diff between timestamp in extension-dat and current time before we set to nil
+(def checkerdiff (* checkerdelay 4))
+; how often worker thread executes
+(def workerdelay (* checkerdelay 10))
+
+(defn checker-thread []
+  "checks extension-dat's timestamp. sets it to nil if it is more than checkerdiff from current timestamp"
+  (let [dat @extension-dat]
+    (if (and (not (nil? dat))
+              (> (- (System/currentTimeMillis) (dat "timestamp"))
+                checkerdiff))
+      (reset! extension-dat nil)))
+  (Thread/sleep checkerdelay)
+  (recur))
+
+(defn debugger-thread []
+  (Thread/sleep 10000)
+  (println @extension-dat)
+  (recur))
 
 (defn gameplayer-thread [channel]
   ;TODO: take screenshots continuously
@@ -18,41 +43,51 @@
   ;TODO: figure out from the screenshot if we have an ongoing game. if yes, do reinforced learning on the game
 )
 
-(defn handle-receive [func]
-  "returns a function that converts data received from websocket to json and runs func on it"
-  (fn [data]
-    (let [dat (json/read-str data)]
-      (if (compare-and-set! called false true)
-        (do (func dat)
-            (reset! called false))
-        nil))))
-    ;(utils/mouseto dat)))
+(defn worker-thread [worker]
+  (fn []
+    (loop []
+      (let [dat @extension-dat]
+        (if (not (nil? dat))
+          (worker dat)))
+      (Thread/sleep workerdelay)
+      (recur))))
+
+(defn handle-receive [data]
+  "receives data over websocket and sets it to extension-dat"
+  (let [dat (json/read-str data)]
+    (reset! extension-dat (assoc dat "timestamp" (System/currentTimeMillis)))))
 
 (defn get-worker [mode]
   "based on mode, returns the function that does actual work, e.g. taking screenshots"
-  (handle-receive
-    (cond
-      (= mode "gather") utils/take-screenshot
-      :else (fn [dat] (println "do nothing")))))
+  (cond
+    (= mode "gather") utils/take-screenshot
+    :else (fn [dat] nil)))
 
-(defn handler [worker]
-  "returns actual handler of request"
-  (fn [request]
-    (with-channel request channel
-      ;TODO: create a game playing object
-      (let [f (future ((gameplayer-thread channel)))]
-        (on-close channel (fn [status]
-          ;TODO: stop game playing object
-          (println "channel closed: " status)))
-        ; for completeness we include an on-receive, but we really don't care what is received
-        ; ok, for completeness and also it's nice to see if stuff is still happening
-        (on-receive channel worker)))))
+(defn handler [request]
+  "handler of websocket"
+  (with-channel request channel
+    ;TODO: create a game playing object
+    (let [f (future ((gameplayer-thread channel)))]
+      (on-close channel (fn [status]
+        ;TODO: stop game playing object
+        (println "channel closed: " status)))
+      ; for completeness we include an on-receive, but we really don't care what is received
+      ; ok, for completeness and also it's nice to see if stuff is still happening
+      (on-receive channel handle-receive))))
+
+(defroutes all-routes
+  (GET "/ws" [] handler)
+  (files "/raw/" {:root "raw"}))
 
 (defn -main
   "I don't do a whole lot ... yet."
   [& args]
   (let [mode (nth args 0)
-        worker (get-worker mode)]
+        worker (get-worker mode)
+        t1 (future (checker-thread))
+        t2 (future ((worker-thread worker)))
+        t3 (future (debugger-thread))]
   ;(utils/take-screenshot)
     (println "Starting server on port 9999")
-    (run-server (handler worker) {:port 9999})))
+    ;(run-server (handler worker) {:port 9999})))
+    (run-server (site #'all-routes) {:port 9999})))

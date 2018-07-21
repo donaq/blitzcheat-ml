@@ -1,7 +1,7 @@
 var sock = null;
 
 function createsock(){
-	sock = new WebSocket("ws://localhost:9999");
+	sock = new WebSocket("ws://localhost:9999/ws");
 	sock.onclose = function(evt){
 		sock = null;
 	};
