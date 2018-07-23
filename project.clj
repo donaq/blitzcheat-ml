@@ -6,6 +6,7 @@
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [org.clojure/data.json "0.2.6"]
                  [javax.servlet/servlet-api "2.5"]
+                 [me.raynes/fs "1.4.4"]
                  [compojure "1.6.1"]
                  [http-kit "2.2.0"]]
   :main ^:skip-aot blitzcheat-ml.core

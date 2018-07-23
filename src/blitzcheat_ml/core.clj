@@ -60,7 +60,9 @@
 (defn get-worker [mode]
   "based on mode, returns the function that does actual work, e.g. taking screenshots"
   (cond
-    (= mode "gather") utils/take-screenshot
+    (= mode "gather") (do
+                        (utils/pre-gather)
+                        utils/take-screenshot)
     :else (fn [dat] nil)))
 
 (defn handler [request]
