@@ -15,6 +15,9 @@
   (if (not (fs/directory? picdir))
     (fs/mkdir picdir)))
 
+(defn ls-raw []
+  (fs/list-dir picdir))
+
 (defn take-screenshot [dat]
   ; Note that this borks if you are using Gnome on Wayland. I had to switch to Xorg for it to work. https://bbs.archlinux.org/viewtopic.php?id=220820
   (let [x (int (dat "left"))

@@ -65,7 +65,7 @@
                         utils/take-screenshot)
     :else (fn [dat] nil)))
 
-(defn handler [request]
+(defn ws-handler [request]
   "handler of websocket"
   (with-channel request channel
     ;TODO: create a game playing object
@@ -73,12 +73,21 @@
       (on-close channel (fn [status]
         ;TODO: stop game playing object
         (println "channel closed: " status)))
-      ; for completeness we include an on-receive, but we really don't care what is received
-      ; ok, for completeness and also it's nice to see if stuff is still happening
       (on-receive channel handle-receive))))
 
+(defn ls-handler [request]
+  {:status 200
+   :headers {"Content-Type" "application/json"}
+   :body (json/write-str (utils/ls-raw))})
+
+(defn annotate-pic [request]
+  (let [picdat (json/read-str (slurp (:body request) :encoding "UTF-8"))]
+    (println picdat)))
+
 (defroutes all-routes
-  (GET "/ws" [] handler)
+  (GET "/ws" [] ws-handler)
+  (GET "/ls" [] ls-handler)
+  (POST "/annotate" [] annotate-pic)
   (files "/raw/" {:root "raw"}))
 
 (defn -main
