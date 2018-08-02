@@ -1,7 +1,8 @@
 ; take-screenshot copied from https://gist.github.com/jhartikainen/2843727
 (ns blitzcheat-ml.utils
   (:gen-class)
-  (:require [me.raynes.fs :as fs])
+  (:require [me.raynes.fs :as fs]
+            [clojure.data.json :as json])
   (:import 
     (java.awt Rectangle Dimension Robot Toolkit)
     (java.awt.image BufferedImage)
@@ -9,14 +10,34 @@
     (javax.imageio ImageIO)))
 
 (def picdir "raw/")
+(def datfile "public/annotations.json")
 
 (defn pre-gather []
   (println "pre-gather")
   (if (not (fs/directory? picdir))
     (fs/mkdir picdir)))
 
+(defn req-json [request]
+  (json/read-str (slurp (:body request) :encoding "UTF-8")))
+
+(defn get-existing-annotations []
+  "returns the hashmap in datfile if it exists, otherwise returns empty map"
+  (if (fs/file? datfile)
+    (-> datfile slurp json/read-str)
+    {}))
+
+(defn from-dir []
+  "returns a hashmap of <image file name>:{} from picdir"
+  (into {}
+          (map (fn [v] [v {}]) (fs/list-dir picdir))))
+
+(defn merge-lses [existing lsres]
+  "returns a map with the keys in `lsres` taking values from `existing` iff the corresponding key exists"
+  (merge lsres
+         (into {} (filter #(contains? lsres (first %)) existing))))
+
 (defn ls-raw []
-  (fs/list-dir picdir))
+  (json/write-str (merge-lses (get-existing-annotations) (from-dir))))
 
 (defn take-screenshot [dat]
   ; Note that this borks if you are using Gnome on Wayland. I had to switch to Xorg for it to work. https://bbs.archlinux.org/viewtopic.php?id=220820

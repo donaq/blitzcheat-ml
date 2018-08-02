@@ -7,15 +7,16 @@
         [compojure.core :only [defroutes GET POST DELETE ANY context]]
         [org.httpkit.server]))
 
-; this is a simple lock to prevent flooding
+; extension continuously writes to this. checker continuously sets this to nil
 (def extension-dat (atom nil))
-
 ; how often the checker thread executes
 (def checkerdelay 50)
 ; how big a diff between timestamp in extension-dat and current time before we set to nil
 (def checkerdiff (* checkerdelay 4))
 ; how often worker thread executes
 (def workerdelay (* checkerdelay 10))
+
+
 
 (defn checker-thread []
   "checks extension-dat's timestamp. sets it to nil if it is more than checkerdiff from current timestamp"
@@ -78,17 +79,18 @@
 (defn ls-handler [request]
   {:status 200
    :headers {"Content-Type" "application/json"}
-   :body (json/write-str (utils/ls-raw))})
+   :body (utils/ls-raw)})
 
 (defn annotate-pic [request]
-  (let [picdat (json/read-str (slurp (:body request) :encoding "UTF-8"))]
+  (let [picdat (utils/req-json request)]
     (println picdat)))
 
 (defroutes all-routes
   (GET "/ws" [] ws-handler)
   (GET "/ls" [] ls-handler)
   (POST "/annotate" [] annotate-pic)
-  (files "/raw/" {:root "raw"}))
+  (files "/raw/" {:root "raw"})
+  (files "/public/" {:root "public"}))
 
 (defn -main
   "I don't do a whole lot ... yet."
