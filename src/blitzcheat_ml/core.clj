@@ -79,18 +79,18 @@
 (defn ls-handler [request]
   {:status 200
    :headers {"Content-Type" "application/json"}
-   :body (utils/ls-raw)})
+   :body (json/write-str (utils/ls-raw))})
 
 (defn annotate-pic [request]
-  (let [picdat (utils/req-json request)]
-    (println picdat)))
+  (utils/save-to-existing request)
+  {:status 200})
 
 (defroutes all-routes
   (GET "/ws" [] ws-handler)
   (GET "/ls" [] ls-handler)
   (POST "/annotate" [] annotate-pic)
   (files "/raw/" {:root "raw"})
-  (files "/public/" {:root "public"}))
+  (files "/" {:root "public"}))
 
 (defn -main
   "I don't do a whole lot ... yet."

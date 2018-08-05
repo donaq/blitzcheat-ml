@@ -18,13 +18,19 @@
     (fs/mkdir picdir)))
 
 (defn req-json [request]
+  ; parses (:body request) as json
   (json/read-str (slurp (:body request) :encoding "UTF-8")))
+
+(defn save-to-existing [request]
+  (let [jstr (slurp (:body request) :encoding "UTF-8")]
+    (println jstr)
+    (spit datfile jstr)))
 
 (defn get-existing-annotations []
   "returns the hashmap in datfile if it exists, otherwise returns empty map"
   (if (fs/file? datfile)
     (-> datfile slurp json/read-str)
-    {}))
+    {"pics" {}}))
 
 (defn from-dir []
   "returns a hashmap of <image file name>:{} from picdir"
@@ -37,7 +43,9 @@
          (into {} (filter #(contains? lsres (first %)) existing))))
 
 (defn ls-raw []
-  (json/write-str (merge-lses (get-existing-annotations) (from-dir))))
+  (let [existing (get-existing-annotations)
+        newpics (merge-lses (existing "pics") (from-dir))]
+    (merge existing {"pics" newpics})))
 
 (defn take-screenshot [dat]
   ; Note that this borks if you are using Gnome on Wayland. I had to switch to Xorg for it to work. https://bbs.archlinux.org/viewtopic.php?id=220820
