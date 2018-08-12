@@ -1,5 +1,46 @@
 $(document).ready(function(){
-    var picdat = null, sortedkeys = null, curr = -1;
+    var picdat = null, sortedkeys = null, curr = -1, currclicked = [];
+
+    // save currently clicked point to curr image's class
+    function saveclick(){
+        if(curr==-1 || currclicked.length<1){
+            $("#pointinfo").html("no point to save");
+            return;
+        }
+
+        var pic = picdat.pics[sortedkeys[curr]],
+            clsobj = picdat.classes[pic.class];
+        if("areas" in clsobj){
+            delete clsobj.areas
+        }
+        clsobj.click = currclicked[0];
+        save();
+    }
+
+    function clear_points_areas(){
+        $(".clicked").remove();
+    }
+
+    function draw_points_areas(){
+        clear_points_areas();
+        var pic = picdat.pics[sortedkeys[curr]],
+            pclass = ("class" in pic)?pic.class:-1;
+        if(pclass==-1) return;
+
+        var clsobj = picdat.classes[pclass],
+            img = document.getElementById(`image${curr}`);
+        if("click" in clsobj){
+            drawclicked(img, clsobj.click[0], clsobj.click[1])
+        }
+    }
+
+    function clearimg(){
+        // clear previous image stuff
+        $(".image").remove();
+        clear_points_areas();
+        currclicked = [];
+        $("#pointinfo").html("");
+    }
 
     // load image. we only work with curr
     function loadimg(i){
@@ -7,42 +48,73 @@ $(document).ready(function(){
             pic = picdat.pics[k],
             img = document.createElement("IMG"),
             container = document.getElementById("imgcontainer");
-        console.log(JSON.stringify(pic));
 
         curr = i;
 
+        clearimg();
+
         // adding the image
-        $(".image").remove();
         img.src = `/raw/${k}`;
         img.className = "image";
         img.id = `image${i}`;
         container.appendChild(img);
         $("#imgname").html(`${k}`);
-        if($.isEmptyObject(pic)) return;
 
-        // add exising image class
-        var pclass = ("class" in pic)?pic.class:"";
-        $("#imageclass").val(pclass);
+        // add existing image class
+        var pclass = ("class" in pic)?pic.class:"-1";
         $("#classes").val(pclass);
+        $("#imageclass").val($("#classes option:selected").text());
+
+        img.addEventListener("click", img_clicked);
+
+        // draw existing class click point or interesting areas
+        draw_points_areas();
     }
+
+    function img_clicked(e){
+        var img = e.currentTarget, rect = img.getBoundingClientRect(),
+            ileft = rect.left, itop = rect.top,
+            // coordinates of click with origin at top left of image
+            ix = e.clientX-ileft, iy = e.clientY-itop;
+
+        currclicked.push([ix, iy]);
+
+        drawclicked(img, ix, iy);
+    }
+
+    // given an image element and x,y coords, draw a square centered at x,y relative to the image top left corner
+    function drawclicked(img, ix, iy){
+        var cdiv = document.createElement("DIV"),
+            rect = img.getBoundingClientRect(),
+            tmpstyle = {"position": "absolute", "left": (ix-5+rect.left+window.scrollX) + "px", "top": (iy-5+rect.top+window.scrollY) + "px",
+                "height":"10px", "width":"10px", "backgroundColor":"powderblue", "zIndex":10000, "opacity":0.5};
+
+        cdiv.className = "clicked";
+        for(k in tmpstyle){
+            cdiv.style[k] = tmpstyle[k];
+        }
+        document.body.appendChild(cdiv);
+    }
+
+    function apply_style(e, s){ for(k in s) e.style[k] = s[k]; }
 
     // populate classification selector
     function populate_classes(){
         $(".classopt").remove();
-        var classes = Object.keys(picdat.classes).sort(),
+        var classes = picdat.classes.map(e => e.name);
             cls_sel = document.getElementById("classes");
 
         var o = document.createElement("option");
         o.className = "classopt";
         o.text = "";
-        o.value = "";
+        o.value = "-1";
         cls_sel.appendChild(o);
 
-        classes.forEach(c => {
+        classes.forEach((c, i) => {
             var o = document.createElement("option");
             o.className = "classopt";
             o.text = c;
-            o.value = c;
+            o.value = parseInt(i);
             cls_sel.appendChild(o);
         });
     }
@@ -57,20 +129,26 @@ $(document).ready(function(){
         });
     }
 
-    function savepic(){
+    function savepicclass(){
         var cls = $("#imageclass").val();
         // only do something if we are initialised, we have a value to work with, and we have a pic
         if(!picdat || !cls || cls=="" || curr==-1 || !(curr in sortedkeys)) return;
 
         var k = sortedkeys[curr];
-        // set current pic's class
-        picdat.pics[k].class = cls;
-
-        // add this class if it doesn't exist
-        if(!(cls in picdat.classes)){
-            picdat.classes[cls] = {};
+        // get class index
+        var classes = picdat.classes.map(e => e.name),
+            cindex = classes.indexOf(cls),
+            cv;
+        if(cindex!=-1){
+            cv = cindex;
+        } else {
+            cv = picdat.classes.length;
+            picdat.classes.push({"name":cls});
             populate_classes();
         }
+        // set current pic's class
+        picdat.pics[k].class = cv;
+        draw_points_areas();
 
         save();
     }
@@ -84,7 +162,7 @@ $(document).ready(function(){
     $.getJSON("/ls", function(dat){
         picdat = dat;
         sortedkeys = Object.keys(picdat.pics).sort();
-        if(!("classes" in picdat)) picdat.classes = {};
+        if(!("classes" in picdat)) picdat.classes = [];
         populate_classes();
     });
 
@@ -103,17 +181,21 @@ $(document).ready(function(){
 
     $("#next").click(function(){
         if(picdat==null) return;
+        savepicclass();
         loadimg(modulo(curr+1, sortedkeys.length));
     });
 
     $("#prev").click(function(){
         if(picdat==null) return;
+        savepicclass();
         loadimg(modulo(curr-1, sortedkeys.length));
     });
 
     $("#classes").change(evt => {
-        $("#imageclass").val($("#classes").val());
+        $("#imageclass").val($("#classes option:selected").text());
     });
 
-    $("#setclass").click(savepic);
+    $("#setclass").click(savepicclass);
+
+    $("#addclick").click(saveclick);
 });
