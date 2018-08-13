@@ -15,10 +15,52 @@ $(document).ready(function(){
         }
         clsobj.click = currclicked[0];
         save();
+        draw_points_areas();
+    }
+
+    // save current area to curr image's class
+    function savearea(){
+        if(curr==-1 || currclicked.length<2){
+            $("#areainfo").html("no area to save");
+            return;
+        }
+
+        var x = currclicked[0][0], y = currclicked[0][1],
+            height = currclicked[1][1]-y, width = currclicked[1][0]-x,
+            area = {"x":x, "y": y, "width":width, "height":height},
+            aname = $("#areaname").val();
+
+        currclicked = [];
+        if(height<0||width<0){
+            $("#areainfo").html("invalid area");
+            return;
+        }
+        if(!aname || aname==""){
+            $("#areainfo").html("unnamed area");
+            return;
+        }
+    
+
+        var pic = picdat.pics[sortedkeys[curr]],
+            clsobj = picdat.classes[pic.class];
+
+        if("click" in clsobj){
+            delete clsobj.click;
+        }
+        if(!("areas" in clsobj)){
+            clsobj.areas = {};
+        }
+        clsobj.areas[aname] = area;
+        save();
+        draw_points_areas();
     }
 
     function clear_points_areas(){
+        currclicked = [];
         $(".clicked").remove();
+        $(".area").remove();
+        $("#pointinfo").html("");
+        $("#areainfo").html("");
     }
 
     function draw_points_areas(){
@@ -31,6 +73,10 @@ $(document).ready(function(){
             img = document.getElementById(`image${curr}`);
         if("click" in clsobj){
             drawclicked(img, clsobj.click[0], clsobj.click[1])
+        } else if("areas" in clsobj){
+            for(var a in clsobj.areas){
+                drawarea(img, a, clsobj.areas[a]);
+            }
         }
     }
 
@@ -38,8 +84,6 @@ $(document).ready(function(){
         // clear previous image stuff
         $(".image").remove();
         clear_points_areas();
-        currclicked = [];
-        $("#pointinfo").html("");
     }
 
     // load image. we only work with curr
@@ -57,18 +101,20 @@ $(document).ready(function(){
         img.src = `/raw/${k}`;
         img.className = "image";
         img.id = `image${i}`;
-        container.appendChild(img);
-        $("#imgname").html(`${k}`);
+        img.addEventListener('load', e => {
+            container.appendChild(img);
+            $("#imgname").html(`${k}`);
 
-        // add existing image class
-        var pclass = ("class" in pic)?pic.class:"-1";
-        $("#classes").val(pclass);
-        $("#imageclass").val($("#classes option:selected").text());
+            // add existing image class
+            var pclass = ("class" in pic)?pic.class:"-1";
+            $("#classes").val(pclass);
+            $("#imageclass").val($("#classes option:selected").text());
 
-        img.addEventListener("click", img_clicked);
+            img.addEventListener("click", img_clicked);
 
-        // draw existing class click point or interesting areas
-        draw_points_areas();
+            // draw existing class click point or interesting areas
+            draw_points_areas();
+        });
     }
 
     function img_clicked(e){
@@ -90,13 +136,22 @@ $(document).ready(function(){
                 "height":"10px", "width":"10px", "backgroundColor":"powderblue", "zIndex":10000, "opacity":0.5};
 
         cdiv.className = "clicked";
-        for(k in tmpstyle){
-            cdiv.style[k] = tmpstyle[k];
-        }
+        apply_style(cdiv, tmpstyle);
         document.body.appendChild(cdiv);
     }
 
-    function apply_style(e, s){ for(k in s) e.style[k] = s[k]; }
+    function drawarea(img, aname, area){
+        var cdiv = document.createElement("DIV"),
+            rect = img.getBoundingClientRect(),
+            tmpstyle = {"position": "absolute", "left": (area.x+rect.left+window.scrollX) + "px", "top": (area.y+rect.top+window.scrollY) + "px",
+                "height":area.height+"px", "width":area.width+"px", "backgroundColor":"powderblue", "zIndex":10000, "opacity":0.5};
+        cdiv.className = "area";
+        cdiv.title = aname;
+        apply_style(cdiv, tmpstyle);
+        document.body.appendChild(cdiv);
+    }
+
+    function apply_style(e, s){ for(var k in s) e.style[k] = s[k]; }
 
     // populate classification selector
     function populate_classes(){
@@ -198,4 +253,6 @@ $(document).ready(function(){
     $("#setclass").click(savepicclass);
 
     $("#addclick").click(saveclick);
+
+    $("#addarea").click(savearea);
 });
