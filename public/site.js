@@ -114,6 +114,7 @@ $(document).ready(function(){
 
             // draw existing class click point or interesting areas
             draw_points_areas();
+            $("#workleft").html((sortedkeys.length-curr)+ " of " + sortedkeys.length + " images left");
         });
     }
 
