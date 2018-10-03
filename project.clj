@@ -13,7 +13,8 @@
                  [compojure "1.6.1"]
                  [http-kit "2.2.0"]]
   :aliases {"gather" ["run" "-m" "blitzcheat-ml.core" "gather"]
-            "prep" ["run" "-m" "blitzcheat-ml.prep"]}
+            "prep" ["run" "-m" "blitzcheat-ml.prep"]
+            "emnist" ["run" "-m" "emnist.core"]}
   :main ^:skip-aot blitzcheat-ml.core
   :target-path "target/%s"
   :profiles {:uberjar {:aot :all}})
