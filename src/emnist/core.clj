@@ -12,8 +12,9 @@
            [org.deeplearning4j.nn.weights WeightInit]
            [org.deeplearning4j.nn.multilayer MultiLayerNetwork]
            [org.deeplearning4j.optimize.listeners ScoreIterationListener]
+           [org.deeplearning4j.optimize.api TrainingListener]
+           [org.deeplearning4j.datasets.iterator MultipleEpochsIterator]
            ))
-;[org.deeplearning4j.datasets.iterator]
 ;org.deeplearning4j.nn.graph
 ;org.deeplearning4j.nn.conf.inputs
 ;org.deeplearning4j.datasets.datavec RecordReaderMultiDataSetIterator
@@ -22,7 +23,7 @@
 (defn -main
   "this will split the raw data into training, dev and test sets"
   [& args]
-  (let [batch-size 16
+  (let [batch-size 50
         emnist-set (EmnistDataSetIterator$Set/BALANCED)
         emnist-train (EmnistDataSetIterator. emnist-set batch-size true)
         emnist-test (EmnistDataSetIterator. emnist-set batch-size false)
@@ -50,5 +51,11 @@
                  (.pretrain false) (.backprop true)
                  .build)
         network (MultiLayerNetwork. conf)
-        each-iterations 5]
-    (prn conf)))
+        each-iterations 100
+        num-epochs 2]
+    (.init network)
+    (.addListeners network (into-array TrainingListener [(ScoreIterationListener. each-iterations)]))
+    (.fit network (MultipleEpochsIterator. num-epochs emnist-train))
+    (println (-> network (.evaluate emnist-test) .stats))
+    (println (-> network (.evaluateROCMultiClass emnist-test) .stats))
+    ))

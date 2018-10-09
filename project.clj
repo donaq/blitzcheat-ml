@@ -10,6 +10,8 @@
                  [org.deeplearning4j/deeplearning4j-core "1.0.0-beta2"]
                  [org.deeplearning4j/deeplearning4j-zoo "1.0.0-beta2"]
                  [org.datavec/datavec-api "1.0.0-beta2"]
+                 [org.clojure/tools.logging "0.3.1"]
+                 [ch.qos.logback/logback-classic "1.1.3"]
                  [me.raynes/fs "1.4.4"]
                  [compojure "1.6.1"]
                  [http-kit "2.2.0"]]
