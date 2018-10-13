@@ -23,8 +23,8 @@
 (defn -main
   "this will split the raw data into training, dev and test sets"
   [& args]
-  (let [batch-size 50
-        emnist-set (EmnistDataSetIterator$Set/BALANCED)
+  (let [batch-size 20
+        emnist-set (EmnistDataSetIterator$Set/MNIST)
         emnist-train (EmnistDataSetIterator. emnist-set batch-size true)
         emnist-test (EmnistDataSetIterator. emnist-set batch-size false)
         output-num (EmnistDataSetIterator/numLabels emnist-set)
@@ -51,8 +51,8 @@
                  (.pretrain false) (.backprop true)
                  .build)
         network (MultiLayerNetwork. conf)
-        each-iterations 100
-        num-epochs 2]
+        each-iterations 1000
+        num-epochs 5]
     (.init network)
     (.addListeners network (into-array TrainingListener [(ScoreIterationListener. each-iterations)]))
     (.fit network (MultipleEpochsIterator. num-epochs emnist-train))
