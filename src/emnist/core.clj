@@ -1,3 +1,4 @@
+; this was just a learning exercise to familiarise myself with dl4j
 (ns emnist.core
   (:gen-class)
   (:require [me.raynes.fs :as fs]
@@ -15,6 +16,7 @@
            [org.deeplearning4j.optimize.api TrainingListener]
            [org.deeplearning4j.datasets.iterator MultipleEpochsIterator]
            ))
+
 ;org.deeplearning4j.nn.graph
 ;org.deeplearning4j.nn.conf.inputs
 ;org.deeplearning4j.datasets.datavec RecordReaderMultiDataSetIterator
