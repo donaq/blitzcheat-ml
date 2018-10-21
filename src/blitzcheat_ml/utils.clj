@@ -9,8 +9,14 @@
     (java.io File IOException)
     (javax.imageio ImageIO)))
 
+; all the constants
 (def picdir "raw/")
 (def datfile "public/annotations.json")
+(def classdir "learn-classes/")
+
+(defn between?
+  [x y z]
+  (and (>= x y) (< x z)))
 
 (defn pre-gather []
   (println "pre-gather")
