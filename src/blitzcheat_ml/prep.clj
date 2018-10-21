@@ -11,14 +11,14 @@
   (if (not (fs/directory? classdir))
     (fs/mkdir classdir)))
 
-(defn- write-labels [setdir dat]
+(defn- write-labels [setname dat]
   "writes labels.json for this set (training, dev or test) into setdir"
-  (if (not (fs/directory? setdir))
-    (fs/mkdir setdir))
-  (spit (str setdir "/" "labels.json") (json/write-str dat)))
+  (spit (utils/set-labels-fname setname) (json/write-str dat)))
 
 (defn- copy-pics [setdir dat]
   "copies pics from raw to setdir for this set"
+  (if (not (fs/directory? setdir))
+    (fs/mkdir setdir))
   (doseq [[picname cls] dat]
     (fs/copy (str picdir "/" picname) (str setdir "/" picname))))
 
@@ -26,8 +26,8 @@
 (defn- write-sets [sets]
   (reset-dir)
   (doseq [[loc dat] sets]
-    (let [setdir (str classdir "/" loc)]
-      (write-labels setdir dat)
+    (let [setdir (utils/setdir-from-set loc)]
+      (write-labels loc dat)
       (copy-pics setdir dat))))
 
 (defn -main

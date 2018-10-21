@@ -18,6 +18,12 @@
   [x y z]
   (and (>= x y) (< x z)))
 
+(defn set-labels-fname [setname]
+  (str classdir "/" setname "-labels.json"))
+
+(defn setdir-from-set [setname]
+  (str classdir "/" setname))
+
 (defn pre-gather []
   (println "pre-gather")
   (if (not (fs/directory? picdir))
