@@ -16,20 +16,28 @@
       PathLabelGenerator
       (^Writable getLabelForPath [this ^String path]
         (IntWritable. (labels (-> path (clojure.string/split #"\/") last))))
+      (^Writable getLabelForPath [this ^java.net.URI uri]
+        (.getLabelForPath this (-> uri clojure.java.io/file .toString)))
       (^boolean inferLabelClasses [this]
-        false)
+        true)
       )))
 
+(defn dataset-iterator [setname]
+  "returns a data set iterator based on setname (one of train, dev, test)"
+  (let [batch-size 10
+        setdir (utils/setdir-from-set setname)
+        rr (ImageRecordReader. 640 960 3 (set-label-gen setname))]
+    (.initialize rr (FileSplit. (clojure.java.io/file setdir)))
+    ;rr))
+    (RecordReaderDataSetIterator. rr batch-size)))
 
 
 (defn -main
   [& args]
-  (let [setname "train"
-        setdir (utils/setdir-from-set setname)
-        rr (ImageRecordReader. 640 960 3 (set-label-gen setname))]
-    (.initialize rr (FileSplit. (clojure.java.io/file setdir)))
-    (while (.hasNext rr)
-      (do
-        (prn (.next rr))
-        ))
+  (let [blitz-train (dataset-iterator "train")
+        blitz-test (dataset-iterator "test")
+        blitz-dev (dataset-iterator "dev")]
+    (prn (.getLabels blitz-train))
+    (prn (.getLabels blitz-test))
+    (prn (.getLabels blitz-dev))
     ))
