@@ -66,16 +66,20 @@ $(document).ready(function(){
     function draw_points_areas(){
         clear_points_areas();
         var pic = picdat.pics[sortedkeys[curr]],
-            pclass = ("class" in pic)?pic.class:-1;
-        if(pclass==-1) return;
+            pclass = ("class" in pic)?pic.class:-1,
+            highlightcolor = pclass==-1?"red":"powderblue";
+        if(pclass==-1){
+            if($("#classes").val()==-1) return;
+            pclass = $("#classes").val()
+        }
 
         var clsobj = picdat.classes[pclass],
             img = document.getElementById(`image${curr}`);
         if("click" in clsobj){
-            drawclicked(img, clsobj.click[0], clsobj.click[1])
+            drawclicked(img, clsobj.click[0], clsobj.click[1], highlightcolor)
         } else if("areas" in clsobj){
             for(var a in clsobj.areas){
-                drawarea(img, a, clsobj.areas[a]);
+                drawarea(img, a, clsobj.areas[a], highlightcolor);
             }
         }
     }
@@ -106,7 +110,7 @@ $(document).ready(function(){
             $("#imgname").html(`${k}`);
 
             // add existing image class
-            var pclass = ("class" in pic)?pic.class:"-1";
+            var pclass = ("class" in pic)?pic.class:$("#classes").val();
             $("#classes").val(pclass);
             $("#imageclass").val($("#classes option:selected").text());
 
@@ -126,26 +130,26 @@ $(document).ready(function(){
 
         currclicked.push([ix, iy]);
 
-        drawclicked(img, ix, iy);
+        drawclicked(img, ix, iy, "powderblue");
     }
 
     // given an image element and x,y coords, draw a square centered at x,y relative to the image top left corner
-    function drawclicked(img, ix, iy){
+    function drawclicked(img, ix, iy, highlightcolor){
         var cdiv = document.createElement("DIV"),
             rect = img.getBoundingClientRect(),
             tmpstyle = {"position": "absolute", "left": (ix-5+rect.left+window.scrollX) + "px", "top": (iy-5+rect.top+window.scrollY) + "px",
-                "height":"10px", "width":"10px", "backgroundColor":"powderblue", "zIndex":10000, "opacity":0.5};
+                "height":"10px", "width":"10px", "backgroundColor":highlightcolor, "zIndex":10000, "opacity":0.5};
 
         cdiv.className = "clicked";
         apply_style(cdiv, tmpstyle);
         document.body.appendChild(cdiv);
     }
 
-    function drawarea(img, aname, area){
+    function drawarea(img, aname, area, highlightcolor){
         var cdiv = document.createElement("DIV"),
             rect = img.getBoundingClientRect(),
             tmpstyle = {"position": "absolute", "left": (area.x+rect.left+window.scrollX) + "px", "top": (area.y+rect.top+window.scrollY) + "px",
-                "height":area.height+"px", "width":area.width+"px", "backgroundColor":"powderblue", "zIndex":10000, "opacity":0.5};
+                "height":area.height+"px", "width":area.width+"px", "backgroundColor":highlightcolor, "zIndex":10000, "opacity":0.5};
         cdiv.className = "area";
         cdiv.title = aname;
         apply_style(cdiv, tmpstyle);
