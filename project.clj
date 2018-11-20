@@ -18,6 +18,7 @@
                  [http-kit "2.2.0"]]
   :aliases {"gather" ["run" "-m" "blitzcheat-ml.core" "gather"]
             "prep" ["run" "-m" "blitzcheat-ml.prep"]
+            "classify" ["run" "-m" "blitzcheat-ml.classify"]
             "emnist" ["run" "-m" "emnist.core"]}
   :main ^:skip-aot blitzcheat-ml.core
   :target-path "target/%s"

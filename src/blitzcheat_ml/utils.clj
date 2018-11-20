@@ -12,17 +12,14 @@
 ; all the constants
 (def picdir "raw/")
 (def datfile "public/annotations.json")
-(def classdir "learn-classes/")
+(def classesdir "learn-classes/")
 
-(defn between?
-  [x y z]
-  (and (>= x y) (< x z)))
-
+;TODO remove set-labels-fname and setdir-from-set
 (defn set-labels-fname [setname]
-  (str classdir "/" setname "-labels.json"))
+  (str classesdir "/" setname "-labels.json"))
 
 (defn setdir-from-set [setname]
-  (str classdir "/" setname))
+  (str classesdir "/" setname))
 
 (defn pre-gather []
   (println "pre-gather")
