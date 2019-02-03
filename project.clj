@@ -6,11 +6,11 @@
   :dependencies [[org.clojure/clojure "1.8.0"]
                  [org.clojure/data.json "0.2.6"]
                  [javax.servlet/servlet-api "2.5"]
-                 [org.nd4j/nd4j-native-platform "1.0.0-beta2"]
+                 [org.nd4j/nd4j-native-platform "1.0.0-beta3"]
                  ;[org.nd4j/nd4j-cuda-9.2-platform "1.0.0-beta2"]
-                 [org.deeplearning4j/deeplearning4j-core "1.0.0-beta2"]
-                 [org.deeplearning4j/deeplearning4j-zoo "1.0.0-beta2"]
-                 [org.datavec/datavec-api "1.0.0-beta2"]
+                 [org.deeplearning4j/deeplearning4j-core "1.0.0-beta3"]
+                 [org.deeplearning4j/deeplearning4j-zoo "1.0.0-beta3"]
+                 [org.datavec/datavec-api "1.0.0-beta3"]
                  [org.clojure/tools.logging "0.3.1"]
                  [ch.qos.logback/logback-classic "1.1.3"]
                  [me.raynes/fs "1.4.4"]
@@ -22,4 +22,5 @@
             "emnist" ["run" "-m" "emnist.core"]}
   :main ^:skip-aot blitzcheat-ml.core
   :target-path "target/%s"
-  :profiles {:uberjar {:aot :all}})
+  :profiles {:uberjar {:aot :all}}
+  :jvm-opts ["-Xmx16G" "-Dorg.bytedeco.javacpp.maxbytes=20G" "-Dorg.bytedeco.javacpp.maxphysicalbytes=38G"])
