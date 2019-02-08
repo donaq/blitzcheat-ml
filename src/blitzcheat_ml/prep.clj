@@ -21,4 +21,4 @@
         numclasses (count (dat "classes"))]
     (reset-dir numclasses)
     (doseq [[pic details] pics]
-      (fs/copy (str picdir "/" pic) (str classesdir "/" (details "class") "/" pic)))))
+      (utils/ensmallen (str picdir "/" pic) (str classesdir "/" (details "class") "/" pic) 96 64))))

@@ -16,8 +16,8 @@
            [org.deeplearning4j.zoo.model LeNet]
            ))
 
-(def h 640)
-(def w 960)
+(def h 64)
+(def w 96)
 (def c 3)
 (def seed 23)
 
@@ -61,7 +61,7 @@
         test-iterator (dataset-iterator test-files)
         input-shape (into-array (map int-array [[c w h]]))
         num-epochs 5
-        each-iterations 50
+        each-iterations 200
         model (get-model input-shape (count (.getLabels train-iterator)))
         ]
     (.addListeners model (into-array TrainingListener [(PerformanceListener. 1) (ScoreIterationListener. each-iterations)]))

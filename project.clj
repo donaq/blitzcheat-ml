@@ -15,6 +15,7 @@
                  [ch.qos.logback/logback-classic "1.1.3"]
                  [me.raynes/fs "1.4.4"]
                  [compojure "1.6.1"]
+                 [image-resizer "0.1.10"]
                  [http-kit "2.2.0"]]
   :aliases {"gather" ["run" "-m" "blitzcheat-ml.core" "gather"]
             "prep" ["run" "-m" "blitzcheat-ml.prep"]

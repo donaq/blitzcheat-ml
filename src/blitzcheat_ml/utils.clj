@@ -2,7 +2,10 @@
 (ns blitzcheat-ml.utils
   (:gen-class)
   (:require [me.raynes.fs :as fs]
+            [image-resizer.core :as iresize]
+            [image-resizer.format :as iformat]
             [clojure.data.json :as json])
+  (:use [clojure.java.io :only [file]])
   (:import 
     (java.awt Rectangle Dimension Robot Toolkit)
     (java.awt.image BufferedImage)
@@ -14,12 +17,11 @@
 (def datfile "public/annotations.json")
 (def classesdir "learn-classes/")
 
-;TODO remove set-labels-fname and setdir-from-set
-(defn set-labels-fname [setname]
-  (str classesdir "/" setname "-labels.json"))
-
-(defn setdir-from-set [setname]
-  (str classesdir "/" setname))
+(defn ensmallen [from to width height]
+  "resizes an image file 'from' to width and height and writes it to 'to'"
+  (iformat/as-file
+    (iresize/force-resize (file from) width height)
+    to :verbatim))
 
 (defn pre-gather []
   (println "pre-gather")
