@@ -2,6 +2,7 @@
   (:gen-class)
   (:require [clojure.data.json :as json]
             [me.raynes.fs :as fs]
+            [clojure.java.io :as io]
             [blitzcheat-ml.utils :as utils :refer [classesdir]])
   (:import [org.deeplearning4j.datasets.datavec RecordReaderDataSetIterator]
            [org.datavec.api.split FileSplit]
@@ -10,14 +11,15 @@
            [org.datavec.api.io.labels ParentPathLabelGenerator]
            [org.datavec.image.recordreader ImageRecordReader]
            [org.datavec.image.transform ScaleImageTransform]
+           [org.deeplearning4j.nn.multilayer MultiLayerNetwork]
            [org.deeplearning4j.datasets.iterator MultipleEpochsIterator]
            [org.deeplearning4j.optimize.listeners ScoreIterationListener PerformanceListener]
            [org.deeplearning4j.optimize.api TrainingListener]
            [org.deeplearning4j.zoo.model LeNet]
            ))
 
-(def h 64)
-(def w 96)
+(def h utils/resizeh)
+(def w utils/resizew)
 (def c 3)
 (def seed 23)
 
@@ -37,7 +39,7 @@
       paths)))
 
 (defn dataset-iterator [dataset]
-  (let [batch-size 10
+  (let [batch-size 50
         rr (ImageRecordReader. h w c (ParentPathLabelGenerator.))]
     (.initialize rr dataset)
     (RecordReaderDataSetIterator. rr batch-size)))
@@ -50,21 +52,30 @@
     (.setInputShape model input-shape)
     (.init model)))
 
+(defn save-model [model]
+  (if (not (fs/directory? "models"))
+    (fs/mkdir "models"))
+  (.save model (io/file "models/trained.model") true))
+
+(defn load-model []
+  (MultiLayerNetwork/load (io/file "models/trained.model") true))
 
 (defn -main
   [& args]
-  (let [filesplit (FileSplit. (clojure.java.io/file classesdir) (java.util.Random. seed))
+  (let [filesplit (FileSplit. (io/file classesdir) (java.util.Random. seed))
         splitted (.sample filesplit (RandomPathFilter. (java.util.Random. seed) (into-array String ["jpg"])) (into-array Double/TYPE [80 20]))
         train-files (first splitted)
         test-files (second splitted)
         train-iterator (dataset-iterator train-files)
         test-iterator (dataset-iterator test-files)
         input-shape (into-array (map int-array [[c w h]]))
-        num-epochs 5
-        each-iterations 200
+        num-epochs 15 
+        each-iterations 50
         model (get-model input-shape (count (.getLabels train-iterator)))
         ]
-    (.addListeners model (into-array TrainingListener [(PerformanceListener. 1) (ScoreIterationListener. each-iterations)]))
+    (.addListeners model (into-array TrainingListener [(PerformanceListener. 10) (ScoreIterationListener. each-iterations)]))
     (.fit model (MultipleEpochsIterator. num-epochs train-iterator))
     (println (-> model (.evaluate test-iterator) .stats))
+    (save-model model)
+    (println "params equal? " (-> model .params (.equals (.params (load-model)))))
     ))

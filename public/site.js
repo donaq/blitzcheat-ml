@@ -245,6 +245,12 @@ $(document).ready(function(){
         loadimg(modulo(curr+1, sortedkeys.length));
     });
 
+    $("#next10").click(function(){
+        if(picdat==null) return;
+        savepicclass();
+        loadimg(modulo(curr+10, sortedkeys.length));
+    });
+
     $("#prev").click(function(){
         if(picdat==null) return;
         savepicclass();

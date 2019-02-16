@@ -17,10 +17,20 @@
 (def datfile "public/annotations.json")
 (def classesdir "learn-classes/")
 
-(defn ensmallen [from to width height]
+; ensmallen constants
+(def cropx 270)
+(def cropy 50)
+(def cropw 420)
+(def croph 590)
+(def resizew 84)
+(def resizeh 118)
+
+(defn ensmallen [from to]
   "resizes an image file 'from' to width and height and writes it to 'to'"
   (iformat/as-file
-    (iresize/force-resize (file from) width height)
+    (-> (file from)
+      (iresize/crop-from cropx cropy cropw croph)
+      (iresize/force-resize resizew resizeh))
     to :verbatim))
 
 (defn pre-gather []
