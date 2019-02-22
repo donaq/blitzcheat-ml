@@ -44,21 +44,23 @@
     (.initialize rr dataset)
     (RecordReaderDataSetIterator. rr batch-size)))
 
+(defn load-model []
+  (MultiLayerNetwork/load (io/file "models/trained.model") true))
+
 (defn get-model [input-shape num-classes]
-  (let [model (-> (LeNet/builder)
-                    (.numClasses num-classes)
-                    (.seed seed)
-                    .build)]
-    (.setInputShape model input-shape)
-    (.init model)))
+  (if (fs/file? "models/trained.model")
+    (load-model)
+    (let [model (-> (LeNet/builder)
+                      (.numClasses num-classes)
+                      (.seed seed)
+                      .build)]
+      (.setInputShape model input-shape)
+      (.init model))))
 
 (defn save-model [model]
   (if (not (fs/directory? "models"))
     (fs/mkdir "models"))
   (.save model (io/file "models/trained.model") true))
-
-(defn load-model []
-  (MultiLayerNetwork/load (io/file "models/trained.model") true))
 
 (defn -main
   [& args]
@@ -69,7 +71,7 @@
         train-iterator (dataset-iterator train-files)
         test-iterator (dataset-iterator test-files)
         input-shape (into-array (map int-array [[c w h]]))
-        num-epochs 15 
+        num-epochs 15
         each-iterations 50
         model (get-model input-shape (count (.getLabels train-iterator)))
         ]
