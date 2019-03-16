@@ -58,12 +58,25 @@
   (let [dat (json/read-str data)]
     (reset! extension-dat (assoc dat "timestamp" (System/currentTimeMillis)))))
 
+
+(defn get-playa []
+  "returns game playing function"
+  (let [classier (utils/load-model)]
+    (utils/pre-game)
+    (fn [dat]
+      (if (utils/is-game? dat classier)
+        (println "is game")
+        (println "not game")
+      )
+  )))
+
 (defn get-worker [mode]
   "based on mode, returns the function that does actual work, e.g. taking screenshots"
   (cond
     (= mode "gather") (do
                         (utils/pre-gather)
                         utils/take-screenshot)
+    (= mode "play") (get-playa)
     :else (fn [dat] nil)))
 
 (defn ws-handler [request]

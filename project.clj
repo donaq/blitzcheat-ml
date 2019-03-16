@@ -18,6 +18,7 @@
                  [image-resizer "0.1.10"]
                  [http-kit "2.2.0"]]
   :aliases {"gather" ["run" "-m" "blitzcheat-ml.core" "gather"]
+            "play" ["run" "-m" "blitzcheat-ml.core" "play"]
             "prep" ["run" "-m" "blitzcheat-ml.prep"]
             "classify" ["run" "-m" "blitzcheat-ml.classify"]
             "emnist" ["run" "-m" "emnist.core"]}

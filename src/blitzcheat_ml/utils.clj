@@ -1,16 +1,18 @@
-; take-screenshot copied from https://gist.github.com/jhartikainen/2843727
 (ns blitzcheat-ml.utils
   (:gen-class)
   (:require [me.raynes.fs :as fs]
             [image-resizer.core :as iresize]
             [image-resizer.format :as iformat]
+            [clojure.java.io :as io]
             [clojure.data.json :as json])
   (:use [clojure.java.io :only [file]])
   (:import 
-    (java.awt Rectangle Dimension Robot Toolkit)
-    (java.awt.image BufferedImage)
-    (java.io File IOException)
-    (javax.imageio ImageIO)))
+    [java.awt Rectangle Dimension Robot Toolkit]
+    [java.awt.image BufferedImage]
+    [java.io File IOException]
+    [javax.imageio ImageIO]
+    [org.datavec.image.loader ImageLoader]
+	[org.deeplearning4j.nn.multilayer MultiLayerNetwork]))
 
 ; all the constants
 (def picdir "raw/")
@@ -24,6 +26,11 @@
 (def croph 590)
 (def resizew 84)
 (def resizeh 118)
+; tmp directory. this is for DRY, not abbreviation
+(def tmpdir "tmp")
+
+(defn load-model []
+  (MultiLayerNetwork/load (io/file "models/trained.model") true))
 
 (defn ensmallen [from to]
   "resizes an image file 'from' to width and height and writes it to 'to'"
@@ -33,10 +40,17 @@
       (iresize/force-resize resizew resizeh))
     to :verbatim))
 
+(defn ensure-dir [dirname]
+  "creates directory by name of dirname if it doesn't exist"
+  (if (not (fs/directory? dirname))
+    (fs/mkdir dirname)))
+
 (defn pre-gather []
   (println "pre-gather")
-  (if (not (fs/directory? picdir))
-    (fs/mkdir picdir)))
+  (ensure-dir picdir))
+
+(defn pre-game []
+  (ensure-dir tmpdir))
 
 (defn req-json [request]
   ; parses (:body request) as json
@@ -68,18 +82,36 @@
         newpics (merge-lses (existing "pics") (from-dir))]
     (merge existing {"pics" newpics})))
 
-(defn take-screenshot [dat]
-  ; Note that this borks if you are using Gnome on Wayland. I had to switch to Xorg for it to work. https://bbs.archlinux.org/viewtopic.php?id=220820
+(defn screenshot-img-from-dat [dat]
   (let [x (int (dat "left"))
         y (int (dat "top"))
         width (int (dat "width"))
         height (int (dat "height"))
-        rt (new Robot)
-        fname (str picdir (System/currentTimeMillis) ".jpg")
-        img (.createScreenCapture rt (new Rectangle x y width height))]
+        rt (new Robot)]
+    (.createScreenCapture rt (new Rectangle x y width height))))
+
+; take-screenshot copied from https://gist.github.com/jhartikainen/2843727
+(defn take-screenshot [dat]
+  ; Note that this borks if you are using Gnome on Wayland. I had to switch to Xorg for it to work. https://bbs.archlinux.org/viewtopic.php?id=220820
+  (let [fname (str picdir (System/currentTimeMillis) ".jpg")
+        img (screenshot-img-from-dat dat)]
     ;TODO: we will need to return the image names
     (ImageIO/write img "jpg" (new File fname))
     (println "created " fname)))
+
+(defn predict-fname [classier fname]
+  (let [il (ImageLoader. resizeh resizew 3)
+        rv (.asRowVector il (new File fname))]
+        ;res (aget (.predict classier rv) 0)]
+    (aget (.predict classier rv) 0)))
+
+(defn is-game? [dat classier]
+  (let [fname "tmp/screenshot.jpg"
+        smallname "tmp/small.jpg"
+        img (screenshot-img-from-dat dat)]
+    (ImageIO/write img "jpg" (new File fname))
+    (ensmallen fname smallname)
+    (= 1 (predict-fname classier smallname))))
 
 (defn mouseto [dat]
   (let [x (int (dat "left"))

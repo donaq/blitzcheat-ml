@@ -3,7 +3,7 @@
   (:require [clojure.data.json :as json]
             [me.raynes.fs :as fs]
             [clojure.java.io :as io]
-            [blitzcheat-ml.utils :as utils :refer [classesdir]])
+            [blitzcheat-ml.utils :as utils :refer [classesdir load-model]])
   (:import [org.deeplearning4j.datasets.datavec RecordReaderDataSetIterator]
            [org.datavec.api.split FileSplit]
            [org.datavec.api.io.filters PathFilter RandomPathFilter]
@@ -44,9 +44,6 @@
     (.initialize rr dataset)
     (RecordReaderDataSetIterator. rr batch-size)))
 
-(defn load-model []
-  (MultiLayerNetwork/load (io/file "models/trained.model") true))
-
 (defn get-model [input-shape num-classes]
   (if (fs/file? "models/trained.model")
     (load-model)
@@ -58,8 +55,7 @@
       (.init model))))
 
 (defn save-model [model]
-  (if (not (fs/directory? "models"))
-    (fs/mkdir "models"))
+  (utils/ensure-dir "models")
   (.save model (io/file "models/trained.model") true))
 
 (defn -main
@@ -71,7 +67,7 @@
         train-iterator (dataset-iterator train-files)
         test-iterator (dataset-iterator test-files)
         input-shape (into-array (map int-array [[c w h]]))
-        num-epochs 15
+        num-epochs 5
         each-iterations 50
         model (get-model input-shape (count (.getLabels train-iterator)))
         ]
