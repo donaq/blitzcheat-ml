@@ -7,7 +7,8 @@
             [clojure.data.json :as json])
   (:use [clojure.java.io :only [file]])
   (:import 
-    [java.awt Rectangle Dimension Robot Toolkit]
+    [java.awt Rectangle Robot]
+    [java.awt.event InputEvent]
     [java.awt.image BufferedImage]
     [java.io File IOException]
     [javax.imageio ImageIO]
@@ -105,16 +106,19 @@
         ;res (aget (.predict classier rv) 0)]
     (aget (.predict classier rv) 0)))
 
-(defn is-game? [dat classier]
+(defn is-game? [img classier]
+  "predict if screen area specified by dat is a game. return true if it is"
+  ; yes, we write files, since we trained the classifier using
+  ; this process, I thought it best not to tamper.
   (let [fname "tmp/screenshot.jpg"
-        smallname "tmp/small.jpg"
-        img (screenshot-img-from-dat dat)]
+        smallname "tmp/small.jpg"]
     (ImageIO/write img "jpg" (new File fname))
     (ensmallen fname smallname)
     (= 1 (predict-fname classier smallname))))
 
-(defn mouseto [dat]
-  (let [x (int (dat "left"))
-        y (int (dat "top"))
-        rt (new Robot)]
-    (.mouseMove rt x y)))
+(defn click-on [x y rt]
+  (let [button (InputEvent/getMaskForButton 1)]
+    (.mouseMove rt x y)
+    ;(.mousePress rt button)
+    ;(.mouseRelease rt button)
+    ))
