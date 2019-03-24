@@ -2,10 +2,14 @@
   (:gen-class)
   (:require [clojure.data.json :as json]
             [blitzcheat-ml.utils :as utils])
-  (:import [java.awt Robot]
+  (:import [java.awt Robot Toolkit]
            [java.io File IOException]
-           [javax.imageio ImageIO])
+           [javax.swing GrayFilter]
+           [net.sourceforge.tess4j Tesseract1 Tesseract]
+           [javax.imageio ImageIO]
+           [java.awt.image BufferedImage FilteredImageSource])
   (:use [compojure.route :only [files not-found]]
+        [clojure.string :only [blank?]]
         [compojure.handler :only [site]] ; form, query params decode; cookie; session, etc
         [compojure.core :only [defroutes GET POST DELETE ANY context]]
         [org.httpkit.server]))
@@ -55,10 +59,29 @@
 (defn get-area [img spec]
   (.getSubimage img (int (spec "x")) (int (spec "y")) (int (spec "width")) (int (spec "height"))))
 
-(defn play-game [img score-area board-area]
-  (let [simg (get-area img score-area)
-        bimg (get-area img board-area)]
-  (ImageIO/write bimg "jpg" (File. "tmp/board.jpg"))))
+(defn grayscale [img]
+  (let [gfilter (GrayFilter. false 50)
+        producer (FilteredImageSource. (.getSource img) gfilter)
+        tki (.createImage (Toolkit/getDefaultToolkit) producer)
+        bufferedimg (BufferedImage. (.getWidth tki) (.getHeight tki) BufferedImage/TYPE_BYTE_GRAY)]
+    (.drawImage (.getGraphics bufferedimg) tki, 0, 0, nil)
+    bufferedimg))
+
+(defn score-from-img [img tess]
+  "tries to get score from img"
+  (let [txt (.doOCR tess img)
+        numstr (.replaceAll txt "[^0-9]" "")]
+    (if (blank? numstr)
+      nil
+      (Integer. numstr))))
+
+(defn play-game [img score-area board-area tess]
+  (let [simg (grayscale (get-area img score-area))
+        bimg (get-area img board-area)
+        score (score-from-img simg tess)]
+  ;(ImageIO/write simg "png" (File. "tmp/score.png"))
+  (println "score is" score)
+  ))
 
 (defn player-thread []
   "returns game playing function"
@@ -66,16 +89,20 @@
         gcls (get-game-cls)
         score-area ((gcls "areas") "score")
         board-area ((gcls "areas") "board")
+        tess (Tesseract1.)
         ;TODO: add game model
         ]
     (utils/pre-game)
+    (.setLanguage tess "eng")
+    ; hardcoded for what appears in arch after you install tesseract
+    (.setDatapath tess "/usr/share/tessdata/")
     (loop []
       (let [dat @extension-dat]
         (if (not (nil? dat))
           (let [img (utils/screenshot-img-from-dat dat)]
             (if (utils/is-game? img classifier)
               ;TODO one iteration of play
-              (play-game img score-area board-area)
+              (play-game img score-area board-area tess)
               ;TODO: game finished action?
               ))))
       (Thread/sleep workerdelay)

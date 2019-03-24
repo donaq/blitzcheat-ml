@@ -3,9 +3,10 @@
   :url "http://example.com/FIXME"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
-  :dependencies [[org.clojure/clojure "1.8.0"]
+  :dependencies [[org.clojure/clojure "1.10.0"]
                  [org.clojure/data.json "0.2.6"]
                  [javax.servlet/servlet-api "2.5"]
+                 [net.sourceforge.tess4j/tess4j "4.3.1"]
                  [org.nd4j/nd4j-native-platform "1.0.0-beta3"]
                  ;[org.nd4j/nd4j-cuda-9.2-platform "1.0.0-beta2"]
                  [org.deeplearning4j/deeplearning4j-core "1.0.0-beta3"]
@@ -16,7 +17,7 @@
                  [me.raynes/fs "1.4.4"]
                  [compojure "1.6.1"]
                  [image-resizer "0.1.10"]
-                 [http-kit "2.2.0"]]
+                 [http-kit "2.3.0"]]
   :aliases {"gather" ["run" "-m" "blitzcheat-ml.core" "gather"]
             "play" ["run" "-m" "blitzcheat-ml.core" "play"]
             "prep" ["run" "-m" "blitzcheat-ml.prep"]
