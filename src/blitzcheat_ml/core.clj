@@ -60,7 +60,7 @@
   (.getSubimage img (int (spec "x")) (int (spec "y")) (int (spec "width")) (int (spec "height"))))
 
 (defn grayscale [img]
-  (let [gfilter (GrayFilter. false 50)
+  (let [gfilter (GrayFilter. true 10)
         producer (FilteredImageSource. (.getSource img) gfilter)
         tki (.createImage (Toolkit/getDefaultToolkit) producer)
         bufferedimg (BufferedImage. (.getWidth tki) (.getHeight tki) BufferedImage/TYPE_BYTE_GRAY)]
@@ -71,9 +71,11 @@
   "tries to get score from img"
   (let [txt (.doOCR tess img)
         numstr (.replaceAll txt "[^0-9]" "")]
-    (if (blank? numstr)
-      nil
-      (Integer. numstr))))
+    (if (= "(©)\n" txt)
+      0
+      (if (blank? numstr)
+        nil
+        (Integer. numstr)))))
 
 (defn play-game [img score-area board-area tess]
   (let [simg (grayscale (get-area img score-area))
