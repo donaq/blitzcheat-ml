@@ -30,7 +30,7 @@
 ; tmp directory. this is for DRY, not abbreviation
 (def tmpdir "tmp")
 
-(defn load-model []
+(defn load-class-model []
   (MultiLayerNetwork/load (io/file "models/trained.model") true))
 
 (defn ensmallen [from to]

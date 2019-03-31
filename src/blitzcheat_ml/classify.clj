@@ -3,7 +3,7 @@
   (:require [clojure.data.json :as json]
             [me.raynes.fs :as fs]
             [clojure.java.io :as io]
-            [blitzcheat-ml.utils :as utils :refer [classesdir load-model]])
+            [blitzcheat-ml.utils :as utils :refer [classesdir load-class-model]])
   (:import [org.deeplearning4j.datasets.datavec RecordReaderDataSetIterator]
            [org.datavec.api.split FileSplit]
            [org.datavec.api.io.filters PathFilter RandomPathFilter]
@@ -46,7 +46,7 @@
 
 (defn get-model [input-shape num-classes]
   (if (fs/file? "models/trained.model")
-    (load-model)
+    (load-class-model)
     (let [model (-> (LeNet/builder)
                       (.numClasses num-classes)
                       (.seed seed)
@@ -74,6 +74,4 @@
     (.addListeners model (into-array TrainingListener [(PerformanceListener. 10) (ScoreIterationListener. each-iterations)]))
     (.fit model (MultipleEpochsIterator. num-epochs train-iterator))
     (println (-> model (.evaluate test-iterator) .stats))
-    (save-model model)
-    (println "params equal? " (-> model .params (.equals (.params (load-model)))))
-    ))
+    (save-model model)))

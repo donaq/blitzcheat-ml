@@ -1,6 +1,7 @@
 (ns blitzcheat-ml.core
   (:gen-class)
   (:require [clojure.data.json :as json]
+            [blitzcheat-ml.policy-gradient :as pg]
             [blitzcheat-ml.utils :as utils])
   (:import [java.awt Robot Toolkit]
            [java.io File IOException]
@@ -22,6 +23,10 @@
 (def checkerdiff (* checkerdelay 4))
 ; how often worker thread executes
 (def workerdelay (* checkerdelay 10))
+; last recorded score; this is the value we want to maximise. we will use score diffs to train our PG network
+(def last-score (atom 0))
+; number of frames ran through the policy gradients network
+(def frames (atom 0))
 
 (defn checker-thread []
   "checks extension-dat's timestamp. sets it to nil if it is more than checkerdiff from current timestamp"
@@ -77,17 +82,31 @@
         nil
         (Integer. numstr)))))
 
+(defn game-pixels [bimg]
+  (let [h (/ (.getHeight bimg) 8)
+        w (/ (.getWidth bimg) 8)
+        xoff (/ w 2)
+        yoff (/ h 2)]
+    (for [y (map (fn [i] (+ (* i h) yoff)) (range 8))
+          x (map (fn [i] (+ (* i w) xoff)) (range 8))]
+      (double (.getRGB bimg x y)))))
+
 (defn play-game [img score-area board-area tess]
   (let [simg (grayscale (get-area img score-area))
         bimg (get-area img board-area)
-        score (score-from-img simg tess)]
+        score (score-from-img simg tess)
+        pixels (double-array (game-pixels bimg))]
   ;(ImageIO/write simg "png" (File. "tmp/score.png"))
-  (println "score is" score)
+    (if (number? score)
+      (reset! last-score score))
+    ;TODO: feed model pixels and get actions
+    (println (pg/to-nd4j-pixels pixels))
+    (reset! frames (+ 1 @frames))
   ))
 
 (defn player-thread []
   "returns game playing function"
-  (let [classifier (utils/load-model)
+  (let [classifier (utils/load-class-model)
         gcls (get-game-cls)
         score-area ((gcls "areas") "score")
         board-area ((gcls "areas") "board")
@@ -106,6 +125,11 @@
               ;TODO one iteration of play
               (play-game img score-area board-area tess)
               ;TODO: game finished action?
+              (if (not= 0 @last-score)
+                (do
+                  (println "feed last-score and number of frames to the network for backprop")
+                  (reset! last-score 0)
+                  (reset! frames 0)))
               ))))
       (Thread/sleep workerdelay)
       (recur))))
