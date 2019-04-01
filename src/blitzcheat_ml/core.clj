@@ -112,18 +112,20 @@
         board-area ((gcls "areas") "board")
         tess (Tesseract1.)
         ;TODO: add game model
+        pgmod (pg/get-model)
         ]
     (utils/pre-game)
     (.setLanguage tess "eng")
     ; hardcoded for what appears in arch after you install tesseract
     (.setDatapath tess "/usr/share/tessdata/")
+    (println pgmod)
     (loop []
       (let [dat @extension-dat]
         (if (not (nil? dat))
           (let [img (utils/screenshot-img-from-dat dat)]
             (if (utils/is-game? img classifier)
               ;TODO one iteration of play
-              (play-game img score-area board-area tess)
+              (play-game img score-area board-area tess pgmod)
               ;TODO: game finished action?
               (if (not= 0 @last-score)
                 (do
