@@ -6,6 +6,7 @@
   (:use [clojure.java.io :only [file]])
   (:import 
     [org.nd4j.linalg.factory Nd4j]
+    [org.nd4j.linalg.ops.transforms Transforms]
     [org.deeplearning4j.nn.conf NeuralNetConfiguration NeuralNetConfiguration$Builder]
     [org.deeplearning4j.nn.conf.layers OutputLayer$Builder DenseLayer DenseLayer$Builder]
     [org.nd4j.linalg.activations Activation]
@@ -16,11 +17,12 @@
 
 (def modpath "models/pg.model")
 (def nin 64)
-(def nout (* 64 5))
+; 4 directions for each position
+(def nout (* 64 4))
 
 (defn to-nd4j-pixels [pixels]
   "convert java array of doubles to ndarray"
-  (Nd4j/create pixels))
+  (.mul (Nd4j/create pixels) 1e-6))
 
 (defn load-model []
   (MultiLayerNetwork/load (io/file modpath) true))
@@ -42,10 +44,10 @@
                                    (.nIn nin)
                                    (.nOut nin)
                                    .build))
-                     (.layer (-> (OutputLayer$Builder. LossFunctions$LossFunction/XENT)
+                     (.layer (-> (DenseLayer$Builder.)
                                    (.nIn nin)
                                    (.nOut nout)
-                                   (.activation Activation/SIGMOID)
+                                   (.activation Activation/IDENTITY)
                                    .build))
                      (.backprop true)
                      (.pretrain false)
@@ -53,3 +55,13 @@
             model (MultiLayerNetwork. conf) ]
         (.init model)
         model)))
+
+(defn ff [m frame]
+  "feed-forward pixels"
+  ;TODO: record pixels i.e. input for backprop
+  (.setInput m (to-nd4j-pixels frame))
+  ;TODO: record output
+  (let [acts (.feedForward m)
+        output (Transforms/sigmoid (last acts))]
+    (println (first acts))
+    output))

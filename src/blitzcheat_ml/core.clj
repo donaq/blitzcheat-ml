@@ -25,8 +25,6 @@
 (def workerdelay (* checkerdelay 10))
 ; last recorded score; this is the value we want to maximise. we will use score diffs to train our PG network
 (def last-score (atom 0))
-; number of frames ran through the policy gradients network
-(def frames (atom 0))
 
 (defn checker-thread []
   "checks extension-dat's timestamp. sets it to nil if it is more than checkerdiff from current timestamp"
@@ -91,7 +89,7 @@
           x (map (fn [i] (+ (* i w) xoff)) (range 8))]
       (double (.getRGB bimg x y)))))
 
-(defn play-game [img score-area board-area tess]
+(defn play-game [img score-area board-area tess pgmod]
   (let [simg (grayscale (get-area img score-area))
         bimg (get-area img board-area)
         score (score-from-img simg tess)
@@ -101,7 +99,7 @@
       (reset! last-score score))
     ;TODO: feed model pixels and get actions
     (println (pg/to-nd4j-pixels pixels))
-    (reset! frames (+ 1 @frames))
+    (println (pg/ff pgmod pixels))
   ))
 
 (defn player-thread []
@@ -118,7 +116,6 @@
     (.setLanguage tess "eng")
     ; hardcoded for what appears in arch after you install tesseract
     (.setDatapath tess "/usr/share/tessdata/")
-    (println pgmod)
     (loop []
       (let [dat @extension-dat]
         (if (not (nil? dat))
@@ -130,8 +127,7 @@
               (if (not= 0 @last-score)
                 (do
                   (println "feed last-score and number of frames to the network for backprop")
-                  (reset! last-score 0)
-                  (reset! frames 0)))
+                  (reset! last-score 0)))
               ))))
       (Thread/sleep workerdelay)
       (recur))))
