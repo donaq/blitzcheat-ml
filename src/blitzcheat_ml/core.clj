@@ -98,8 +98,7 @@
     (if (number? score)
       (reset! last-score score))
     ;TODO: feed model pixels and get actions
-    (println (pg/to-nd4j-pixels pixels))
-    (println (pg/ff pgmod pixels))
+    (pg/ff pgmod pixels)
   ))
 
 (defn player-thread []
@@ -127,6 +126,7 @@
               (if (not= 0 @last-score)
                 (do
                   (println "feed last-score and number of frames to the network for backprop")
+                  (pg/backprop pgmod @last-score)
                   (reset! last-score 0)))
               ))))
       (Thread/sleep workerdelay)

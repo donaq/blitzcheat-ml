@@ -19,10 +19,12 @@
 (def nin 64)
 ; 4 directions for each position
 (def nout (* 64 4))
+(def frames (atom []))
 
 (defn to-nd4j-pixels [pixels]
   "convert java array of doubles to ndarray"
-  (.mul (Nd4j/create pixels) 1e-6))
+  ; 1e-6 is a magic value to ensure the result of applying sigmoid to nout outputs results in usable probabilities
+  (.muli (Nd4j/create pixels) 1e-6))
 
 (defn load-model []
   (MultiLayerNetwork/load (io/file modpath) true))
@@ -56,12 +58,27 @@
         (.init model)
         model)))
 
-(defn ff [m frame]
+(defn to-actions [aprobs]
+  "gets output probabilities (64*4 ndarray) and returns actions"
+  (let [sampler (Nd4j/rand (.shape aprobs))]
+    ; the higher the probability of the action, the more likely it is the sampler is less than it
+    (Transforms/lessThanOrEqual sampler aprobs)))
+
+(defn ff [m pixels]
   "feed-forward pixels"
   ;TODO: record pixels i.e. input for backprop
-  (.setInput m (to-nd4j-pixels frame))
-  ;TODO: record output
-  (let [acts (.feedForward m)
-        output (Transforms/sigmoid (last acts))]
-    (println (first acts))
-    output))
+  (let [frame (to-nd4j-pixels pixels)]
+    (reset! frames (conj @frames frame))
+    (.setInput m frame)
+    ;TODO: record output
+    (let [acts (.feedForward m)
+          aprobs (Transforms/sigmoid (last acts))]
+      (to-actions aprobs))))
+
+(defn backprop [m score]
+  "backprop on model"
+  ;TODO: actually update model
+  (reset! frames [])
+  (println @frames)
+  (println "finished updating model")
+  m)
