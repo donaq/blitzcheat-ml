@@ -49,7 +49,7 @@
                      (.layer (-> (DenseLayer$Builder.)
                                    (.nIn nin)
                                    (.nOut nout)
-                                   (.activation Activation/IDENTITY)
+                                   (.activation Activation/SIGMOID)
                                    .build))
                      (.backprop true)
                      (.pretrain false)
@@ -66,14 +66,16 @@
 
 (defn ff [m pixels]
   "feed-forward pixels"
-  ;TODO: record pixels i.e. input for backprop
   (let [frame (to-nd4j-pixels pixels)]
-    (reset! frames (conj @frames frame))
     (.setInput m frame)
     ;TODO: record output
     (let [acts (.feedForward m)
-          aprobs (Transforms/sigmoid (last acts))]
-      (to-actions aprobs))))
+          aprobs (last acts)
+          actions (to-actions aprobs)]
+      ; record pixels i.e. input for backprop
+      (reset! frames (conj @frames frame))
+      actions
+      )))
 
 (defn backprop [m score]
   "backprop on model"

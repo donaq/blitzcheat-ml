@@ -81,6 +81,7 @@
         (Integer. numstr)))))
 
 (defn game-pixels [bimg]
+  "returns the 64 pixel values at the middle of each square on the board"
   (let [h (/ (.getHeight bimg) 8)
         w (/ (.getWidth bimg) 8)
         xoff (/ w 2)
@@ -89,7 +90,41 @@
           x (map (fn [i] (+ (* i w) xoff)) (range 8))]
       (double (.getRGB bimg x y)))))
 
-(defn play-game [img score-area board-area tess pgmod]
+(defn gemcoords [sq-size sq-mid bx by x y]
+  "get on screen coordinates of gem at row y col x"
+  [
+    (+ bx (* sq-size x) sq-mid)
+    (+ by (* sq-size y) sq-mid)
+  ])
+
+(defn switch-gems [^Robot rt bx by sq-size sq-mid sx sy dx dy]
+  "click on gem at row sy, col sx followed by gem at row dy col dx"
+  (let [[x1 y1] (gemcoords sq-size sq-mid bx by sx sy)
+        [x2 y2] (gemcoords sq-size sq-mid bx by dx dy)]
+    (utils/click-on rt x1 y1)
+    (utils/click-on rt x2 y2)))
+
+(defn moves [^Robot rt actions bx by bw bh]
+  "do all possible moves in actions"
+  (let [iact (vec (.toIntVector actions))
+        ; ok this is hardcoded to 16 because we have ensured that the board is square and making this
+        ; super portable is not the bloody point
+        sq-size (/ bw 8)
+        sq-mid (/ bw 16)]
+    (dorun (for [i (doall (range 64))
+          :let [svstart (* i 4)
+                svend (+ svstart 4)
+                x (rem i 8)
+                y (quot i 8)
+                [up down left right] (subvec iact svstart svend)]]
+      ; so there is a preferred direction
+      (cond
+        (and (not (= y 0)) (= up 1)) (switch-gems rt bx by sq-size sq-mid x y x (- y 1))
+        (and (not (= y 7)) (= down 1)) (switch-gems rt bx by sq-size sq-mid x y x (+ y 1))
+        (and (not (= x 0)) (= left 1)) (switch-gems rt bx by sq-size sq-mid x y (- x 1) y)
+        (and (not (= x 7)) (= right 1)) (switch-gems rt bx by sq-size sq-mid x y (+ x 1) y))))))
+
+(defn play-game [img score-area board-area tess pgmod rt bx by bw bh]
   (let [simg (grayscale (get-area img score-area))
         bimg (get-area img board-area)
         score (score-from-img simg tess)
@@ -98,8 +133,8 @@
     (if (number? score)
       (reset! last-score score))
     ;TODO: feed model pixels and get actions
-    (pg/ff pgmod pixels)
-  ))
+    (moves rt (pg/ff pgmod pixels) bx by bw bh))
+  )
 
 (defn player-thread []
   "returns game playing function"
@@ -108,6 +143,7 @@
         score-area ((gcls "areas") "score")
         board-area ((gcls "areas") "board")
         tess (Tesseract1.)
+        rt (Robot.)
         ;TODO: add game model
         pgmod (pg/get-model)
         ]
@@ -118,10 +154,15 @@
     (loop []
       (let [dat @extension-dat]
         (if (not (nil? dat))
-          (let [img (utils/screenshot-img-from-dat dat)]
+          (let [img (utils/screenshot-img-from-dat dat)
+                ; offset of board from screen
+                bx (+ (int (board-area "x")) (int (dat "left")))
+                by (+ (int (board-area "y")) (int (dat "top")))
+                bw (int (board-area "width"))
+                bh (int (board-area "height"))]
             (if (utils/is-game? img classifier)
               ;TODO one iteration of play
-              (play-game img score-area board-area tess pgmod)
+              (play-game img score-area board-area tess pgmod rt bx by bw bh)
               ;TODO: game finished action?
               (if (not= 0 @last-score)
                 (do
@@ -152,7 +193,7 @@
   (let [points (map (fn [cp] [(int (+ (dat "left") (first cp))) (int (+ (dat "top") (second cp)))]) click-points)
         rt (Robot.)]
     (doseq [cp points]
-      (utils/click-on (first cp) (second cp) rt)
+      (utils/click-on rt (first cp) (second cp))
       (Thread/sleep 2000))))
 
 (defn get-worker [mode]

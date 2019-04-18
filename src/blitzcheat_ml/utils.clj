@@ -116,9 +116,9 @@
     (ensmallen fname smallname)
     (= 1 (predict-fname classier smallname))))
 
-(defn click-on [x y rt]
+(defn click-on [rt x y]
   (let [button (InputEvent/getMaskForButton 1)]
     (.mouseMove rt x y)
-    ;(.mousePress rt button)
-    ;(.mouseRelease rt button)
+    (.mousePress rt button)
+    (.mouseRelease rt button)
     ))
