@@ -3,12 +3,16 @@
   (:require [me.raynes.fs :as fs]
             [clojure.java.io :as io]
             [blitzcheat-ml.utils :as utils])
-  (:use [clojure.java.io :only [file]])
+  (:use [clojure.java.io :only [file]]
+        [clojure.string :only [trim split-lines]]
+        )
   (:import 
+    [java.lang Math]
     [org.nd4j.linalg.factory Nd4j]
     [org.nd4j.linalg.ops.transforms Transforms]
     [org.deeplearning4j.nn.conf NeuralNetConfiguration NeuralNetConfiguration$Builder]
     [org.deeplearning4j.nn.conf.layers OutputLayer$Builder DenseLayer DenseLayer$Builder]
+    [org.deeplearning4j.nn.workspace LayerWorkspaceMgr]
     [org.nd4j.linalg.activations Activation]
     [org.nd4j.linalg.learning.config RmsProp]
     [org.nd4j.linalg.lossfunctions LossFunctions$LossFunction]
@@ -16,15 +20,29 @@
 	[org.deeplearning4j.nn.multilayer MultiLayerNetwork]))
 
 (def modpath "models/pg.model")
+(def scorepath "models/pgscores")
+(def prevscore (atom 0))
 (def nin 64)
 ; 4 directions for each position
 (def nout (* 64 4))
 (def frames (atom []))
+(def dlogps (atom []))
+(def discount 0.99)
 
 (defn to-nd4j-pixels [pixels]
   "convert java array of doubles to ndarray"
   ; 1e-6 is a magic value to ensure the result of applying sigmoid to nout outputs results in usable probabilities
   (.muli (Nd4j/create pixels) 1e-6))
+
+(defn get-prevscore []
+  "returns previous score"
+  (if (fs/file? scorepath)
+    (-> scorepath slurp trim split-lines last Integer/parseInt)
+    0))
+
+(defn save-prevscore []
+  "appends prevscore to scorepath"
+  (spit scorepath (str @prevscore "\n") :append true))
 
 (defn load-model []
   (MultiLayerNetwork/load (io/file modpath) true))
@@ -33,14 +51,22 @@
   (utils/ensure-dir "models")
   (.save model (io/file modpath) true))
 
+(defn discard []
+  (reset! frames [])
+  (reset! dlogps [])
+  (println "discarded this game"))
+
 (defn get-model []
+  ; get-model must set previous score
+  (reset! prevscore (get-prevscore))
+  (println "prevscore" @prevscore)
   (if (fs/file? modpath)
       (load-model)
       (let [conf (-> (NeuralNetConfiguration$Builder.)
                      (.seed 42)
                      (.activation Activation/RELU)
                      (.weightInit WeightInit/XAVIER)
-                     (.updater (RmsProp.))
+                     (.updater (RmsProp. 1e-4))
                      .list
                      (.layer (-> (DenseLayer$Builder.)
                                    (.nIn nin)
@@ -71,16 +97,70 @@
     ;TODO: record output
     (let [acts (.feedForward m)
           aprobs (last acts)
-          actions (to-actions aprobs)]
+          actions (to-actions aprobs)
+          dlogp (.sub actions aprobs)]
       ; record pixels i.e. input for backprop
       (reset! frames (conj @frames frame))
+      (reset! dlogps (conj @dlogps dlogp))
       actions
       )))
 
+(defn reward [oldscore newscore]
+  (cond
+    (= oldscore newscore) 0 ; at higher scores this is unlikely to happen probably
+    ; scale advantage to how much we have improved or deproved, but we want a minimum advantage of 1
+    (> newscore oldscore) (max 1 (Math/log10 (- newscore oldscore)))
+    (< newscore oldscore) (* -1 (max 1 (Math/log10 (- oldscore newscore))))))
+
+(defn discounted-rewards [r]
+  (.transpose
+    (Nd4j/create
+      (double-array
+        (for [i (reverse (range (count @frames)))]
+          (* r (Math/pow discount i)))))))
+
+(defn reset-game [score]
+  (reset! prevscore score)
+  (reset! frames [])
+  (reset! dlogps []))
+
+(defn update-model [m minput merr]
+  (.setInput m minput)
+  (.feedForward m true false)
+  (let [p (.backpropGradient m merr nil)
+        grad (.getFirst p)
+        iter (.getIterationCount m)
+        epoch (.getEpochCount m)
+        updater (.getUpdater m)]
+    (println "epoch" epoch "iter" iter)
+    (.update updater m grad iter epoch (count @frames) (LayerWorkspaceMgr/noWorkspaces))
+    (.subi (.params m) (.gradient grad))
+    (.setEpochCount m (+ 1 epoch))
+    (.setIterationCount m 1)))
+
+(defn print-params [m]
+  (let [l1s (.params (.getLayer m 0))
+        l2s (.params (.getLayer m 1))]
+    (println (.getDouble l1s 20) (.getDouble l2s 20))))
+
 (defn backprop [m score]
   "backprop on model"
-  ;TODO: actually update model
-  (reset! frames [])
-  (println @frames)
-  (println "finished updating model")
-  m)
+  (println "score in backprop function" score)
+  (let [r (reward @prevscore score)
+        dlogps-concat (Nd4j/concat 0 (into-array @dlogps))
+        frames-concat (Nd4j/concat 0 (into-array @frames))]
+    (println "reward" r)
+    (if (not= 0 r)
+      (do
+        ;TODO: actually update model
+        (update-model m frames-concat (.muliColumnVector dlogps-concat (discounted-rewards r)))
+        (println "finished updating model")
+        (save-model m)
+        (reset-game score)
+        (save-prevscore)
+        (println "saved prevscore and model")
+        (print-params m))
+      (do 
+        (println "skipping cos no score diff")
+        (reset-game @prevscore)))
+    m))

@@ -38,7 +38,7 @@
 
 (defn debugger-thread []
   (Thread/sleep 10000)
-  (println @extension-dat)
+  ;(println @extension-dat)
   (recur))
 
 (defn worker-thread [worker]
@@ -136,6 +136,29 @@
     (moves rt (pg/ff pgmod pixels) bx by bw bh))
   )
 
+(defn to-yes-no [ui]
+  (cond
+    (= ui "n") ui
+    (= ui "y") ui
+    :else
+    (let [numstr (.replaceAll ui "[^0-9]" "")]
+      (if (= numstr "")
+        "n"
+        (do
+          (reset! last-score (Integer. numstr)) 
+          (println "last-score reset to" @last-score)
+          "y")))))
+
+
+(defn train-or-discard [pgmod]
+  (let [userinput (read-line)
+        yn (to-yes-no userinput)]
+    (if (= yn "y")
+      (do
+        (println "feed last-score and number of frames to the network for backprop")
+        (pg/backprop pgmod @last-score))
+      (pg/discard))))
+
 (defn player-thread []
   "returns game playing function"
   (let [classifier (utils/load-class-model)
@@ -161,15 +184,21 @@
                 bw (int (board-area "width"))
                 bh (int (board-area "height"))]
             (if (utils/is-game? img classifier)
-              ;TODO one iteration of play
+              ; one iteration of play
               (play-game img score-area board-area tess pgmod rt bx by bw bh)
-              ;TODO: game finished action?
+              ; game finished
               (if (not= 0 @last-score)
                 (do
-                  (println "feed last-score and number of frames to the network for backprop")
-                  (pg/backprop pgmod @last-score)
-                  (reset! last-score 0)))
-              ))))
+                  ; unfortunately necessary because ocr is not 100% reliable
+                  (print "last score was" @last-score ": train? (y/n/actual score)")
+                  (flush)
+                  (train-or-discard pgmod)
+                  (reset! last-score 0))
+                (do
+                  (println "last score was 0 at end of game press anything to continue")
+                  (flush)
+                  )
+                )))))
       (Thread/sleep workerdelay)
       (recur))))
 
@@ -236,7 +265,7 @@
         t2 (future ((worker-thread worker)))
         t3 (future (debugger-thread))
         t4 (if (= mode "play") (future (player-thread)))]
-  ;(utils/take-screenshot)
+    ;(utils/take-screenshot)
     (println "Starting server on port 9999")
     ;(run-server (handler worker) {:port 9999})))
     (run-server (site #'all-routes) {:port 9999})))
