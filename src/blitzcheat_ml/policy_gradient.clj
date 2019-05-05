@@ -43,8 +43,7 @@
 
 (defn discard []
   (reset! frames [])
-  (reset! dlogps [])
-  (println "discarded this game"))
+  (reset! dlogps []))
 
 (defn get-model []
   ; get-model must set previous score
@@ -139,16 +138,14 @@
   "backprop on model"
   (if (> 2 (count @frames))
     m
-    (let [rewards (rewards-from-frames)
+    (let [rewards (.transpose (Nd4j/create (double-array (rewards-from-frames))))
           f-end (- (count @frames) 1)
-          ;dlogps-concat (Nd4j/concat 0 (into-array (subvec @dlogps 0 f-end)))
-          ;frames-concat (Nd4j/concat 0 (into-array (subvec @frames 0 f-end)))]
-          ]
-      (println rewards)
+          dlogps-concat (Nd4j/concat 0 (into-array (subvec @dlogps 0 f-end)))
+          frames-concat (Nd4j/concat 0 (into-array (subvec @frames 0 f-end)))]
       ;TODO: actually update model
       ;(update-model m frames-concat (.muliColumnVector dlogps-concat (discounted-rewards r)))
-      ;(update-model m frames-concat (.muliColumnVector dlogps-concat rewards))
-      (println "finished updating model with" (count @frames) "frames")
+      (update-model m frames-concat (.muliColumnVector dlogps-concat rewards))
+      (println "finished updating model with" f-end "frames")
       (save-model m)
       (discard)
       (println "saved model")
