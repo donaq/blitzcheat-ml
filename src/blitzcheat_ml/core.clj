@@ -124,17 +124,13 @@
         (and (not (= x 0)) (= left 1)) (switch-gems rt bx by sq-size sq-mid x y (- x 1) y)
         (and (not (= x 7)) (= right 1)) (switch-gems rt bx by sq-size sq-mid x y (+ x 1) y))))))
 
-(defn play-game [img score-area board-area tess pgmod rt bx by bw bh]
-  (let [simg (grayscale (get-area img score-area))
-        bimg (get-area img board-area)
-        score (score-from-img simg tess)
+(defn play-game [img board-area pgmod rt bx by bw bh]
+  (let [bimg (get-area img board-area)
         pixels (double-array (game-pixels bimg))]
-  ;(ImageIO/write simg "png" (File. "tmp/score.png"))
-    (if (number? score)
-      (reset! last-score score))
-    ;TODO: feed model pixels and get actions
-    (moves rt (pg/ff pgmod pixels) bx by bw bh))
-  )
+    ; feed model pixels and get actions
+    (moves rt (pg/ff pgmod pixels) bx by bw bh)
+    (Thread/sleep 1000)
+  ))
 
 (defn to-yes-no [ui]
   (cond
@@ -149,7 +145,7 @@
           (println "last-score reset to" @last-score)
           "y")))))
 
-
+; legacy from score-based training
 (defn train-or-discard [pgmod]
   (let [userinput (read-line)
         yn (to-yes-no userinput)]
@@ -163,17 +159,10 @@
   "returns game playing function"
   (let [classifier (utils/load-class-model)
         gcls (get-game-cls)
-        score-area ((gcls "areas") "score")
         board-area ((gcls "areas") "board")
-        tess (Tesseract1.)
         rt (Robot.)
-        ;TODO: add game model
-        pgmod (pg/get-model)
-        ]
+        pgmod (pg/get-model)]
     (utils/pre-game)
-    (.setLanguage tess "eng")
-    ; hardcoded for what appears in arch after you install tesseract
-    (.setDatapath tess "/usr/share/tessdata/")
     (loop []
       (let [dat @extension-dat]
         (if (not (nil? dat))
@@ -185,20 +174,9 @@
                 bh (int (board-area "height"))]
             (if (utils/is-game? img classifier)
               ; one iteration of play
-              (play-game img score-area board-area tess pgmod rt bx by bw bh)
+              (play-game img board-area pgmod rt bx by bw bh)
               ; game finished
-              (if (not= 0 @last-score)
-                (do
-                  ; unfortunately necessary because ocr is not 100% reliable
-                  (print "last score was" @last-score ": train? (y/n/actual score)")
-                  (flush)
-                  (train-or-discard pgmod)
-                  (reset! last-score 0))
-                (do
-                  (println "last score was 0 at end of game press anything to continue")
-                  (flush)
-                  )
-                )))))
+              (pg/backprop pgmod)))))
       (Thread/sleep workerdelay)
       (recur))))
 

@@ -34,16 +34,6 @@
   ; 1e-6 is a magic value to ensure the result of applying sigmoid to nout outputs results in usable probabilities
   (.muli (Nd4j/create pixels) 1e-6))
 
-(defn get-prevscore []
-  "returns previous score"
-  (if (fs/file? scorepath)
-    (-> scorepath slurp trim split-lines last Integer/parseInt)
-    0))
-
-(defn save-prevscore []
-  "appends prevscore to scorepath"
-  (spit scorepath (str @prevscore "\n") :append true))
-
 (defn load-model []
   (MultiLayerNetwork/load (io/file modpath) true))
 
@@ -58,8 +48,6 @@
 
 (defn get-model []
   ; get-model must set previous score
-  (reset! prevscore (get-prevscore))
-  (println "prevscore" @prevscore)
   (if (fs/file? modpath)
       (load-model)
       (let [conf (-> (NeuralNetConfiguration$Builder.)
@@ -119,11 +107,6 @@
         (for [i (reverse (range (count @frames)))]
           (* r (Math/pow discount i)))))))
 
-(defn reset-game [score]
-  (reset! prevscore score)
-  (reset! frames [])
-  (reset! dlogps []))
-
 (defn update-model [m minput merr]
   (.setInput m minput)
   (.feedForward m true false)
@@ -143,24 +126,31 @@
         l2s (.params (.getLayer m 1))]
     (println (.getDouble l1s 20) (.getDouble l2s 20))))
 
-(defn backprop [m score]
+(defn rewards-from-frames []
+  "reward is -1 for a frame if the frame after that has no changes, otherwise it's 1"
+  (doall (for [i (range (- (count @frames) 1))]
+    (if (= 0.0
+           (.getDouble (Nd4j/sum (.neq (nth @frames i) (nth @frames (+ 1 i)))) 0))
+      -1
+      1)
+    )))
+
+(defn backprop [m]
   "backprop on model"
-  (println "score in backprop function" score)
-  (let [r (reward @prevscore score)
-        dlogps-concat (Nd4j/concat 0 (into-array @dlogps))
-        frames-concat (Nd4j/concat 0 (into-array @frames))]
-    (println "reward" r)
-    (if (not= 0 r)
-      (do
-        ;TODO: actually update model
-        (update-model m frames-concat (.muliColumnVector dlogps-concat (discounted-rewards r)))
-        (println "finished updating model")
-        (save-model m)
-        (reset-game score)
-        (save-prevscore)
-        (println "saved prevscore and model")
-        (print-params m))
-      (do 
-        (println "skipping cos no score diff")
-        (reset-game @prevscore)))
-    m))
+  (if (> 2 (count @frames))
+    m
+    (let [rewards (rewards-from-frames)
+          f-end (- (count @frames) 1)
+          ;dlogps-concat (Nd4j/concat 0 (into-array (subvec @dlogps 0 f-end)))
+          ;frames-concat (Nd4j/concat 0 (into-array (subvec @frames 0 f-end)))]
+          ]
+      (println rewards)
+      ;TODO: actually update model
+      ;(update-model m frames-concat (.muliColumnVector dlogps-concat (discounted-rewards r)))
+      ;(update-model m frames-concat (.muliColumnVector dlogps-concat rewards))
+      (println "finished updating model with" (count @frames) "frames")
+      (save-model m)
+      (discard)
+      (println "saved model")
+      (print-params m)
+      m)))
